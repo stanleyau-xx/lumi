@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm dark (espresso) */
+    --background: 28 15% 9%;
+    --foreground: 38 22% 88%;
+    --card: 28 12% 12%;
+    --card-foreground: 38 22% 88%;
+    --popover: 28 12% 13%;
+    --popover-foreground: 38 22% 88%;
+    --primary: 20 58% 54%;
+    --primary-foreground: 28 15% 9%;
+    --secondary: 28 10% 20%;
+    --secondary-foreground: 38 22% 85%;
+    --muted: 28 10% 16%;
+    --muted-foreground: 35 8% 50%;
+    --accent: 28 10% 20%;
+    --accent-foreground: 38 22% 85%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 38 22% 92%;
+    --border: 28 10% 18%;
+    --input: 28 10% 20%;
+    --ring: 20 58% 54%;
+    --radius: 0.75rem;
+    --sidebar: 28 12% 11%;
+    --user-bubble: 28 10% 20%;
+  }
+
+  .light {
+    /* Warm light (cream) */
+    --background: 40 40% 97%;
+    --foreground: 25 20% 14%;
+    --card: 40 30% 100%;
+    --card-foreground: 25 20% 14%;
+    --popover: 40 30% 99%;
+    --popover-foreground: 25 20% 14%;
+    --primary: 20 58% 54%;
+    --primary-foreground: 40 40% 97%;
+    --secondary: 38 22% 90%;
+    --secondary-foreground: 25 20% 18%;
+    --muted: 38 22% 92%;
+    --muted-foreground: 30 10% 48%;
+    --accent: 38 18% 90%;
+    --accent-foreground: 25 20% 14%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 40 40% 97%;
+    --border: 38 18% 87%;
+    --input: 38 18% 90%;
+    --ring: 20 58% 54%;
+    --sidebar: 38 25% 93%;
+    --user-bubble: 38 22% 90%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+/* Sidebar background */
+.sidebar-bg {
+  background-color: hsl(var(--sidebar));
+}
+
+/* User message bubble */
+.user-bubble {
+  background-color: hsl(var(--user-bubble));
+}
+
+
+/* ── Code block container ────────────────────────────────────────────────── */
+.code-block {
+  border: 1px solid hsl(var(--border) / 0.5);
+  background: hsl(28 15% 7%);
+}
+
+.code-block-header {
+  background: hsl(28 15% 5%);
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+}
+
+.code-block pre,
+.code-block code {
+  background: transparent !important;
+  color: hsl(38 22% 80%) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  white-space: pre;
+}
+
+
+.katex-display {
+  @apply overflow-x-auto;
+}
+
+@keyframes pulse-dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: pulse-dot 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
