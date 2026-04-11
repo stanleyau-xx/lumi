@@ -56,8 +56,7 @@ export async function ocrPdfBuffer(
   pdfBuffer: Buffer,
   maxPages = 20
 ): Promise<{ text: string; pageCount: number }> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
   // Disable PDF.js worker threads (not needed in server context)
   pdfjsLib.GlobalWorkerOptions.workerSrc = "";
