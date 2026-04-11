@@ -1,193 +1,174 @@
-<<<<<<< HEAD
-# Lumi - Self-hosted AI Chat Application
+# Lumi - AI Chat
 
-A complete, self-hosted AI chat web application with support for multiple AI providers, web search, and user management.
+A self-hosted AI chat application built with Next.js. Connect your own API keys for OpenAI, Anthropic, Google, and other providers — your data stays on your server.
 
 ## Features
 
-- **Multiple AI Providers**: OpenAI, Claude, OpenRouter, MiniMax, MiniMax-CN
-- **Web Search**: SearXNG integration for enhanced AI responses
-- **User Management**: Local authentication with role-based access (user/admin)
-- **Streaming Responses**: Real-time AI responses via SSE
-- **Markdown Support**: Code syntax highlighting, LaTeX math rendering
-- **Conversation History**: Persistent chat history with search
-- **Admin Portal**: Full control over providers, models, and settings
-- **Docker Ready**: Easy deployment on Synology NAS or any Docker host
+- **Multi-provider support** — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, and more
+- **Streaming responses** with stop/resume
+- **Message branching** — edit any message and explore alternative responses
+- **File attachments** — PDF, spreadsheets, images with OCR support
+- **Web search** — SearXNG integration for grounded responses
+- **Multi-user** — local authentication with admin and user roles
+- **Admin panel** — manage providers, models, users, and settings
+- **Mobile-friendly** UI with dark/light mode
+- **Self-hosted** with SQLite — no external database needed
 
-## Quick Start
+---
+
+## Quick Start with Docker
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/stanleyau-xx/lumi.git
+cd lumi
+```
+
+### 2. Create your environment file
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values (see [Environment Variables](#environment-variables) below).
+
+### 3. Start
+
+```bash
+docker compose up -d
+```
+
+The app will be available at `http://localhost:3000`.
+
+Log in with the admin credentials you set in `.env`. Then go to **Admin > Providers** to add your AI API keys.
+
+---
+
+## Docker Build
+
+### Build the image manually
+
+```bash
+docker build -t lumi .
+```
+
+### Run without Docker Compose
+
+```bash
+docker run -d \
+  -p 3000:3000 \
+  -e NEXTAUTH_SECRET=your-secret \
+  -e NEXTAUTH_URL=http://localhost:3000 \
+  -e ENCRYPTION_KEY=your-32-char-key \
+  -e ADMIN_USERNAME=admin \
+  -e ADMIN_PASSWORD=changeme \
+  -v lumi-data:/app/data \
+  --name lumi \
+  lumi
+```
+
+### Rebuild after code changes
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+### Back up your data
+
+All data is stored in a SQLite database inside the container volume. To back it up:
+
+```bash
+docker cp lumi:/app/data/db.sqlite ./backup-$(date +%Y%m%d).sqlite
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXTAUTH_SECRET` | Yes | Secret for session signing — generate with `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | Yes | Full URL your app is accessible at, e.g. `http://localhost:3000` |
+| `ENCRYPTION_KEY` | Yes | Key for encrypting stored API secrets — generate with `openssl rand -hex 32` |
+| `ADMIN_USERNAME` | Yes | Admin account username (created on first run) |
+| `ADMIN_PASSWORD` | Yes | Admin account password |
+| `DATABASE_URL` | No | SQLite path (default: `file:/app/data/db.sqlite`) |
+
+> AI provider API keys (OpenAI, Anthropic, etc.) are added through the admin panel — not via environment variables.
+
+---
+
+## Deploying with Portainer
+
+1. Go to **Stacks > Add stack**
+2. Paste the contents of `docker-compose.yml`
+3. Add the required environment variables in the UI
+4. Deploy the stack
+
+---
+
+## Local Development
 
 ### Prerequisites
 
 - Node.js 20+
-- npm or Docker
+- npm
 
-### Local Development
+### Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/stanleyau-xx/lumi
-   cd lumi
-   ```
+```bash
+npm install
+npm run dev       # starts on http://localhost:3001
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Useful commands
 
-3. Create environment file:
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+npm run build       # production build
+npm run typecheck   # TypeScript type check
+npm run lint        # ESLint
+npm run db:studio   # Drizzle DB browser UI
+```
 
-4. Generate an encryption key:
-   ```bash
-   openssl rand -hex 32
-   ```
-   Add this to your `.env` file as `ENCRYPTION_KEY=`
+---
 
-5. Run the development server:
-   ```bash
-   npm run dev
-   ```
+## Adding AI Providers
 
-6. Open [http://localhost:3000](http://localhost:3000)
+1. Log in as admin and go to **Admin > Providers**
+2. Click **Add Provider** and select the type
+3. Enter your API key
+4. Go to **Admin > Models**, click **Fetch Models**, then enable the ones you want
 
-### Docker Deployment
+Supported providers include OpenAI, Anthropic, Google Gemini, OpenRouter, MiniMax, and any OpenAI-compatible endpoint (e.g. Ollama, LM Studio).
 
-1. Clone the repository:
-   ```bash
-   git clone <your-repo>
-   cd lumi
-   ```
+---
 
-2. Create environment file:
-   ```bash
-   cp .env.example .env
-   ```
+## Web Search (SearXNG)
 
-3. Edit `.env` with your settings:
-   ```
-   NEXTAUTH_SECRET=your-secret-here
-   NEXTAUTH_URL=http://your-domain.com
-   ENCRYPTION_KEY=your-64-char-hex-key
-   ADMIN_USERNAME=admin
-   ADMIN_PASSWORD=your-admin-password
-   ```
+1. Set up a [SearXNG](https://searxng.github.io/searxng/) instance (can run on the same NAS)
+2. Enable JSON output format in SearXNG settings
+3. In Lumi: **Admin > Search**, enter your SearXNG URL and test the connection
 
-4. Build and start:
-   ```bash
-   docker-compose up -d
-   ```
-
-5. Access at `http://localhost:3000`
-
-## Synology NAS Setup
-
-### Using Docker Compose (DSM 7+)
-
-1. Install "Docker" package from Synology Package Center
-
-2. SSH into your NAS and navigate to your project folder
-
-3. Create the `.env` file with your settings
-
-4. Run:
-   ```bash
-   docker-compose up -d
-   ```
-
-5. Access at `http://your-nas-ip:3000`
-
-6. (Recommended) Set up Synology Reverse Proxy:
-   - Open Control Panel > Application Portal > Reverse Proxy
-   - Create a reverse proxy rule to expose port 3000 with your SSL certificate
-
-### Using Portainer
-
-1. Create a new Stack in Portainer
-
-2. Paste your `docker-compose.yml` content
-
-3. Add environment variables:
-   - `NEXTAUTH_SECRET`
-   - `NEXTAUTH_URL`
-   - `ENCRYPTION_KEY`
-   - `ADMIN_USERNAME`
-   - `ADMIN_PASSWORD`
-
-4. Deploy the stack
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXTAUTH_SECRET` | Yes | Secret for NextAuth.js (generate with `openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | Yes | Your deployment URL (e.g., `https://chat.example.com`) |
-| `ENCRYPTION_KEY` | Yes | 64-char hex key for encrypting API secrets (generate with `openssl rand -hex 32`) |
-| `ADMIN_USERNAME` | Yes | Initial admin username |
-| `ADMIN_PASSWORD` | Yes | Initial admin password |
-| `DATABASE_URL` | No | SQLite database path (default: `file:./data/db.sqlite`) |
-
-### Adding AI Providers
-
-1. Log in as admin
-2. Go to Admin > Providers
-3. Click "Add Provider"
-4. Select provider type and enter credentials:
-   - **OpenAI**: Enter API key
-   - **Claude**: Enter API key
-   - **OpenRouter**: Enter API key
-   - **MiniMax/MiniMax-CN**: Enter API key and base URL (if using CN variant)
-
-### SearXNG Setup
-
-1. Install SearXNG on a server (can be your NAS)
-2. Enable JSON output format
-3. Go to Admin > Search
-4. Enter your SearXNG URL (e.g., `http://192.168.1.x:8080`)
-5. Test the connection
+---
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Database**: SQLite via better-sqlite3
-- **ORM**: Drizzle ORM
-- **Auth**: NextAuth.js v5
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Streaming**: Vercel AI SDK
-- **Deployment**: Docker
+- **Framework** — Next.js 15 (App Router)
+- **Language** — TypeScript
+- **Database** — SQLite via better-sqlite3 + Drizzle ORM
+- **Auth** — NextAuth.js
+- **UI** — Tailwind CSS + shadcn/ui
+- **AI** — Vercel AI SDK, OpenAI SDK, Anthropic SDK
+- **Deployment** — Docker (multi-stage build)
 
-## API Routes
-
-### Conversations
-- `GET /api/conversations` - List user's conversations
-- `POST /api/conversations` - Create new conversation
-- `GET /api/conversations/[id]` - Get conversation details
-- `PATCH /api/conversations/[id]` - Update conversation
-- `DELETE /api/conversations/[id]` - Delete conversation
-- `GET /api/conversations/[id]/messages` - Get message history
-- `POST /api/conversations/[id]/message` - Send message (streaming)
-
-### Admin
-- `GET/POST /api/admin/providers` - List/create providers
-- `PATCH/DELETE /api/admin/providers/[id]` - Update/delete provider
-- `POST /api/admin/providers/[id]/connect` - OAuth connect
-- `POST /api/admin/providers/[id]/test` - Test connection
-- `GET /api/admin/models` - List models
-- `PATCH /api/admin/models/[id]` - Update model
-- `POST /api/admin/models/fetch` - Fetch models from provider
-- `GET/PATCH /api/admin/search` - SearXNG config
-- `GET/POST /api/admin/users` - List/create users
-- `PATCH/DELETE /api/admin/users/[id]` - Update/delete user
-- `GET/PATCH /api/admin/settings` - Global settings
+---
 
 ## License
 
 MIT
-=======
-# lumi
-Lumi - AI Chat
->>>>>>> c1ac9775d805704f85c6091d1a19452760bc5c25
