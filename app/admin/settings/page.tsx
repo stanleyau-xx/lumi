@@ -151,17 +151,6 @@ export default function SettingsAdminPage() {
           {saving ? "Saving..." : "Save Settings"}
         </Button>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>About</CardTitle>
-            <CardDescription>Application information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Version <span className="font-mono font-medium text-foreground">v1.0.0</span>
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
     </div>

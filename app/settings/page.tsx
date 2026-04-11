@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { version } from "../../package.json";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -291,6 +292,10 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <footer className="mt-8 text-center text-xs text-muted-foreground">
+        v{version}
+      </footer>
     </div>
     </div>
   );
