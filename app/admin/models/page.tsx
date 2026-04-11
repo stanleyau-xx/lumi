@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, Star, Pencil, Check, X, Plus } from "lucide-react";
+import { Loader2, RefreshCw, Star, Pencil, Check, X, Plus, Trash2 } from "lucide-react";
 
 type Model = {
   id: string;
@@ -36,6 +36,8 @@ export default function ModelsPage() {
   const [editDescValue, setEditDescValue] = useState("");
   const [addingModel, setAddingModel] = useState<string | null>(null);
   const [newModelId, setNewModelId] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetchModels();
@@ -168,6 +170,25 @@ export default function ModelsPage() {
       }
     } catch {
       toast({ title: "Failed to add model", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/admin/models/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setModels((prev) => prev.filter((m) => m.id !== id));
+        if (defaultModelId === id) setDefaultModelId(null);
+        toast({ title: "Model removed" });
+      } else {
+        toast({ title: "Failed to remove model", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Failed to remove model", variant: "destructive" });
+    } finally {
+      setDeleting(null);
+      setConfirmDelete(null);
     }
   };
 
@@ -372,21 +393,48 @@ export default function ModelsPage() {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant={isDefault ? "secondary" : "ghost"}
-                        size="sm"
-                        onClick={() => handleSetDefault(model)}
-                        disabled={isDefault || settingDefault === model.id}
-                        className="text-xs"
-                      >
-                        {settingDefault === model.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : isDefault ? (
-                          "Default"
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={isDefault ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => handleSetDefault(model)}
+                          disabled={isDefault || settingDefault === model.id}
+                          className="text-xs"
+                        >
+                          {settingDefault === model.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : isDefault ? (
+                            "Default"
+                          ) : (
+                            "Set as Default"
+                          )}
+                        </Button>
+                        {confirmDelete === model.id ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="text-xs"
+                              onClick={() => handleDelete(model.id)}
+                              disabled={deleting === model.id}
+                            >
+                              {deleting === model.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirm"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-xs" onClick={() => setConfirmDelete(null)}>
+                              Cancel
+                            </Button>
+                          </>
                         ) : (
-                          "Set as Default"
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setConfirmDelete(model.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </div>
                   );
                 })}
