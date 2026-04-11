@@ -25,8 +25,8 @@ A complete, self-hosted AI chat web application with support for multiple AI pro
 
 1. Clone the repository:
    ```bash
-   git clone <your-repo>
-   cd chatai
+   git clone https://github.com/stanleyau-xx/lumi
+   cd lumi
    ```
 
 2. Install dependencies:
@@ -57,7 +57,7 @@ A complete, self-hosted AI chat web application with support for multiple AI pro
 1. Clone the repository:
    ```bash
    git clone <your-repo>
-   cd chatai
+   cd lumi
    ```
 
 2. Create environment file:
