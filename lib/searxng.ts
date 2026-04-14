@@ -45,6 +45,7 @@ export async function search(query: string, engines: string[] = ["google", "bing
     engines: engines.join(","),
     lang: config.defaultLanguage,
     safe_search: config.safeSearch.toString(),
+    time_range: "day",
   });
 
   const response = await fetch(`${searxngUrl}/search?${params}`, {

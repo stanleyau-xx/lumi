@@ -10,15 +10,19 @@ Return "NO_SEARCH" if the message is: a greeting, casual conversation, general k
 
 Return ONLY the search query (under 80 characters) if the message requires real-time or recent information: weather, news, sports scores, stock/crypto prices, live events, recent product releases, current people/roles, or anything where the answer may have changed since mid-2025.
 
+For live data queries (prices, rates, scores) write the query as a human would search right now — use words like "today", "now", "live", "current" rather than inserting the date directly into the query.
+
 Examples:
 "How are you?" → NO_SEARCH
 "What is Python?" → NO_SEARCH
 "Write me a poem" → NO_SEARCH
 "Help me fix this code" → NO_SEARCH
 "What's the weather in Hong Kong tomorrow?" → weather Hong Kong tomorrow forecast
-"Latest iPhone release" → latest iPhone release 2026
-"Bitcoin price" → Bitcoin price ${today}
-"Who is the US president?" → US president ${today}
+"Latest iPhone release" → latest iPhone model released 2026
+"Bitcoin price" → Bitcoin price today live
+"BTC/USD" → BTC USD price now
+"Who is the US president?" → current US president 2026
+"AAPL stock price" → AAPL stock price today
 
 User message: `;
 }
