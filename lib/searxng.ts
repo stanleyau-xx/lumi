@@ -59,7 +59,7 @@ export async function search(query: string, engines: string[] = ["google", "bing
 
   if (!data.results) return [];
 
-  return data.results.slice(0, 5).map((result: any) => ({
+  return data.results.slice(0, 3).map((result: any) => ({
     title: result.title || "",
     url: result.url || "",
     snippet: result.content || result.description || "",
@@ -73,7 +73,7 @@ export function formatSearchResults(results: SearchResult[]): string {
     .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}`)
     .join("\n\n");
 
-  return `REAL-TIME SEARCH RESULTS (retrieved just now):\n${formatted}\n\nINSTRUCTION: Use the search results above to answer the user's question directly with specific facts, numbers, and details from those results. Do NOT say you lack access to real-time data — the results above ARE real-time data.`;
+  return `REAL-TIME SEARCH RESULTS (retrieved just now):\n${formatted}\n\nINSTRUCTION: Answer using the search results above. State each fact once — do not repeat the same figure or source. If multiple results agree on a value, cite it once. Do NOT say you lack real-time data — the results above ARE real-time data.`;
 }
 
 export async function testSearXNGConnection(
