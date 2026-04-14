@@ -14,8 +14,6 @@ type SearchSettings = {
   enabled: boolean;
   defaultLanguage: string;
   safeSearch: number;
-  username: string;
-  password: string;
 };
 
 export default function SearchPage() {
@@ -25,8 +23,6 @@ export default function SearchPage() {
     enabled: false,
     defaultLanguage: "en",
     safeSearch: 0,
-    username: "",
-    password: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,11 +74,7 @@ export default function SearchPage() {
       const res = await fetch("/api/admin/search/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: settings.url,
-          username: settings.username,
-          password: settings.password,
-        }),
+        body: JSON.stringify({ url: settings.url }),
       });
 
       if (res.ok) {
@@ -142,32 +134,6 @@ export default function SearchPage() {
                 onCheckedChange={(v) => setSettings({ ...settings, enabled: v })}
               />
               <Label>Enable Web Search</Label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="username">Username <span className="text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="username"
-                  value={settings.username}
-                  onChange={(e) => setSettings({ ...settings, username: e.target.value })}
-                  placeholder="Leave blank if no auth"
-                  className="mt-1"
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password <span className="text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={settings.password}
-                  onChange={(e) => setSettings({ ...settings, password: e.target.value })}
-                  placeholder="Leave blank if no auth"
-                  className="mt-1"
-                  autoComplete="off"
-                />
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

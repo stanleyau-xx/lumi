@@ -10,13 +10,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { url, username, password } = body;
+  const { url } = body;
 
   if (!url) {
     return NextResponse.json({ error: "URL is required" }, { status: 400 });
   }
 
-  const result = await testSearXNGConnection(url, username, password);
+  const result = await testSearXNGConnection(url);
 
   return NextResponse.json(result);
 }

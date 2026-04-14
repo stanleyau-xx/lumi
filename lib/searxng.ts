@@ -1,5 +1,4 @@
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
 
 export type SearchResult = {
   title: string;
@@ -12,15 +11,7 @@ export type SearXNGConfig = {
   enabled: boolean;
   defaultLanguage: string;
   safeSearch: number;
-  username: string;
-  password: string;
 };
-
-function buildAuthHeaders(username: string, password: string): Record<string, string> {
-  if (!username && !password) return {};
-  const token = Buffer.from(`${username}:${password}`).toString("base64");
-  return { Authorization: `Basic ${token}` };
-}
 
 export async function getSearXNGConfig(): Promise<SearXNGConfig | null> {
   const settings = await Promise.all([
@@ -28,8 +19,6 @@ export async function getSearXNGConfig(): Promise<SearXNGConfig | null> {
     db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "searxng_enabled") }),
     db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "searxng_default_language") }),
     db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "searxng_safe_search") }),
-    db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "searxng_username") }),
-    db.query.settings.findFirst({ where: (s, { eq }) => eq(s.key, "searxng_password") }),
   ]);
 
   if (!settings[0]?.value) return null;
@@ -39,8 +28,6 @@ export async function getSearXNGConfig(): Promise<SearXNGConfig | null> {
     enabled: settings[1]?.value === "true",
     defaultLanguage: settings[2]?.value || "en",
     safeSearch: parseInt(settings[3]?.value || "0", 10),
-    username: settings[4]?.value || "",
-    password: settings[5]?.value || "",
   };
 }
 
@@ -61,10 +48,7 @@ export async function search(query: string, engines: string[] = ["google", "bing
   });
 
   const response = await fetch(`${searxngUrl}/search?${params}`, {
-    headers: {
-      Accept: "application/json",
-      ...buildAuthHeaders(config.username, config.password),
-    },
+    headers: { Accept: "application/json" },
   });
 
   if (!response.ok) {
@@ -93,17 +77,12 @@ export function formatSearchResults(results: SearchResult[]): string {
 }
 
 export async function testSearXNGConnection(
-  url: string,
-  username = "",
-  password = ""
+  url: string
 ): Promise<{ success: boolean; error?: string; results?: SearchResult[] }> {
   try {
     const cleanUrl = url.replace(/\/$/, "");
     const response = await fetch(`${cleanUrl}/search?q=test&format=json&engines=google&lang=en`, {
-      headers: {
-        Accept: "application/json",
-        ...buildAuthHeaders(username, password),
-      },
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) {
