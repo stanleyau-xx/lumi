@@ -2,11 +2,13 @@ import { streamChat, ChatMessage } from "./providers";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 
-const EXTRACTION_PROMPT = `Decide whether this message needs a real-time internet search.
+function buildExtractionPrompt(): string {
+  const today = new Date().toISOString().split("T")[0]; // e.g. 2026-04-14
+  return `Today's date is ${today}. Decide whether this message needs a real-time internet search.
 
 Return "NO_SEARCH" if the message is: a greeting, casual conversation, general knowledge, coding help, explanations, math, writing, or anything answerable without current data.
 
-Return ONLY the search query (under 80 characters) if the message requires real-time information: weather, news, sports scores, stock prices, live events, recent releases, or anything time-sensitive.
+Return ONLY the search query (under 80 characters) if the message requires real-time or recent information: weather, news, sports scores, stock/crypto prices, live events, recent product releases, current people/roles, or anything where the answer may have changed since mid-2025.
 
 Examples:
 "How are you?" → NO_SEARCH
@@ -14,10 +16,12 @@ Examples:
 "Write me a poem" → NO_SEARCH
 "Help me fix this code" → NO_SEARCH
 "What's the weather in Hong Kong tomorrow?" → weather Hong Kong tomorrow forecast
-"Latest iPhone release" → latest iPhone release date specs
-"Bitcoin price today" → Bitcoin price today
+"Latest iPhone release" → latest iPhone release 2026
+"Bitcoin price" → Bitcoin price ${today}
+"Who is the US president?" → US president ${today}
 
 User message: `;
+}
 
 export async function extractSearchQuery(
   userMessage: string,
@@ -35,7 +39,7 @@ export async function extractSearchQuery(
     },
     {
       role: "user",
-      content: `${EXTRACTION_PROMPT}"${userMessage}"`,
+      content: `${buildExtractionPrompt()}"${userMessage}"`,
     },
   ];
 

@@ -4,7 +4,7 @@ import { eq, asc } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
 import { streamChat, ChatMessage } from "@/lib/providers";
-import { search, formatSearchResults } from "@/lib/searxng";
+import { search, formatSearchResults, getSearXNGConfig } from "@/lib/searxng";
 import { extractSearchQuery } from "@/lib/search-extractor";
 import { ocrPdfBuffer } from "@/lib/ocr";
 
@@ -225,6 +225,16 @@ export async function POST(
     }
   }
 
+  // Inject today's date so the AI always has correct temporal context
+  const todayStr = new Date().toISOString().split("T")[0];
+  const dateNote = `Today's date is ${todayStr}.`;
+  const existingSystem = chatMessages.find((m) => m.role === "system");
+  if (existingSystem) {
+    existingSystem.content = `${dateNote}\n\n${existingSystem.content}`;
+  } else {
+    chatMessages.push({ role: "system", content: dateNote });
+  }
+
   // Resolve provider/model early so it's available for multimodal content building
   const convProvider = providerId || conversation.providerId
     ? db.select().from(schema.providers).where(eq(schema.providers.id, providerId || conversation.providerId!)).get()
@@ -240,28 +250,33 @@ export async function POST(
     return NextResponse.json({ error: "No provider or model configured" }, { status: 400 });
   }
 
-  const shouldSearch = searchEnabled ?? conversation.searchEnabled;
+  // forceSearch = per-conversation toggle: always search regardless of classifier
+  // autoSearch  = SearXNG is globally enabled: run classifier on every message
+  const forceSearch = searchEnabled ?? conversation.searchEnabled;
+  const searxngConfig = await getSearXNGConfig();
+  const autoSearch = !!(searxngConfig?.enabled && searxngConfig?.url);
   let searchResults = "";
 
-  console.log("[Search] shouldSearch:", shouldSearch);
-  if (shouldSearch) {
+  if ((forceSearch || autoSearch) && convProvider && convModel) {
     try {
-      console.log("[Search] provider:", convProvider?.name, "model:", convModel?.modelId);
+      const searchQuery = forceSearch
+        // Force mode: use classifier but fall back to raw content if it says NO_SEARCH
+        ? (await extractSearchQuery(content, convProvider, convModel)) ?? content.slice(0, 80)
+        // Auto mode: only search if classifier returns a query
+        : await extractSearchQuery(content, convProvider, convModel);
 
-      if (convProvider && convModel) {
-        const searchQuery = await extractSearchQuery(content, convProvider, convModel);
-        console.log("[Search] extracted query:", searchQuery);
-        if (searchQuery) {
-          const results = await search(searchQuery);
-          console.log("[Search] results count:", results.length);
-          searchResults = formatSearchResults(results);
+      console.log("[Search] query:", searchQuery, "| force:", forceSearch, "| auto:", autoSearch);
 
-          const searchSystemIndex = chatMessages.findIndex((m) => m.role === "system");
-          if (searchSystemIndex >= 0) {
-            chatMessages[searchSystemIndex].content += `\n\n${searchResults}`;
-          } else {
-            chatMessages.push({ role: "system", content: searchResults });
-          }
+      if (searchQuery) {
+        const results = await search(searchQuery);
+        console.log("[Search] results count:", results.length);
+        searchResults = formatSearchResults(results);
+
+        const searchSystemIndex = chatMessages.findIndex((m) => m.role === "system");
+        if (searchSystemIndex >= 0) {
+          chatMessages[searchSystemIndex].content += `\n\n${searchResults}`;
+        } else {
+          chatMessages.push({ role: "system", content: searchResults });
         }
       }
     } catch (error) {
