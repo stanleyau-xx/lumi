@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check, Brain, ChevronDown, ChevronRight, ChevronLeft, FileText, FileSpreadsheet, File, ImageIcon, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { StockWidget } from "@/components/chat/stock-widget";
 
 /** Clipboard helper with fallback for mobile browsers that lack navigator.clipboard */
 async function copyToClipboardSafe(text: string): Promise<void> {
@@ -25,6 +26,17 @@ async function copyToClipboardSafe(text: string): Promise<void> {
     document.execCommand("copy");
     document.body.removeChild(el);
   }
+}
+
+/** Extract [STOCK:TICKER] marker from the start of a message */
+function parseStockMarker(content: string): { stockTicker: string | null; text: string } {
+  const trimmed = content.trimStart();
+  const match = trimmed.match(/^\[STOCK:([A-Z0-9^.=-]+)\]/);
+  if (match) {
+    const text = trimmed.slice(match[0].length).replace(/^[\r\n]+/, "");
+    return { stockTicker: match[1], text };
+  }
+  return { stockTicker: null, text: content };
 }
 
 function parseThinking(content: string): { thinking: string | null; response: string; isThinking: boolean } {
@@ -258,7 +270,8 @@ export function MessageBubble({
 
   if (!isUser) {
     // ── Assistant message ──────────────────────────────────────────────────
-    const { thinking, response, isThinking } = parseThinking(message.content);
+    const { stockTicker, text: contentWithoutWidget } = parseStockMarker(message.content);
+    const { thinking, response, isThinking } = parseThinking(contentWithoutWidget);
     const showThinking = isThinking || (isStreaming && !response);
     return (
       <div className="flex justify-start">
@@ -272,6 +285,7 @@ export function MessageBubble({
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
           </Button>
           <div className="markdown-content">
+            {stockTicker && <StockWidget symbol={stockTicker} />}
             {showThinking && <ThinkingBlock thinking={thinking} isThinking={showThinking} />}
             {response && (
               <ReactMarkdown

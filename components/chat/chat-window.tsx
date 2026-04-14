@@ -400,9 +400,13 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
         const chunk = decoder.decode(value, { stream: true });
         assistantContent += chunk;
 
+        // Strip [STOCK:TICKER] marker from display — it's a widget hint, not body text.
+        // (The full content including the marker is saved to DB server-side.)
+        const displayContent = assistantContent.replace(/^\s*\[STOCK:[A-Z0-9^.=-]+\]\n?/, "");
+
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantMessage.id ? { ...msg, content: assistantContent } : msg
+            msg.id === assistantMessage.id ? { ...msg, content: displayContent } : msg
           )
         );
       }

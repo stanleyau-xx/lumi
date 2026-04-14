@@ -43,10 +43,19 @@ export async function fetchWeather(location: string): Promise<string | null> {
       `- UV index:    ${cur.uvIndex}`,
     ];
 
-    // Today's forecast high/low
-    const today = data.weather?.[0];
-    if (today) {
-      lines.push(`- Today high:  ${today.maxtempC}°C  /  low: ${today.mintempC}°C`);
+    // 3-day forecast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const forecast: any[] = data.weather ?? [];
+    if (forecast.length > 0) {
+      lines.push(`\n3-day forecast:`);
+      for (const day of forecast) {
+        const date: string = day.date ?? "";
+        const dayDesc: string = day.hourly?.[4]?.weatherDesc?.[0]?.value ?? day.hourly?.[0]?.weatherDesc?.[0]?.value ?? "";
+        const sunrise: string = day.astronomy?.[0]?.sunrise ?? "";
+        const sunset: string  = day.astronomy?.[0]?.sunset  ?? "";
+        const astro = sunrise && sunset ? ` (sunrise ${sunrise}, sunset ${sunset})` : "";
+        lines.push(`- ${date}: high ${day.maxtempC}°C / low ${day.mintempC}°C, ${dayDesc}${astro}`);
+      }
     }
 
     return (

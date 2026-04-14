@@ -1,63 +1,71 @@
 import { streamChat, ChatMessage } from "./providers";
-import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
 
-function buildExtractionPrompt(): string {
-  const today = new Date().toISOString().split("T")[0]; // e.g. 2026-04-14
-  return `Today's date is ${today}. Decide whether this message needs a real-time internet search.
+export type ClassifierResult = {
+  skipSearch: boolean;
+  showWeatherWidget: boolean;
+  showStockWidget: boolean;
+  standaloneFollowUp: string;
+};
 
-Return "NO_SEARCH" if the message is: a greeting, casual conversation, general knowledge, coding help, explanations, math, writing, or anything answerable without current data.
+const CLASSIFIER_SYSTEM = `You are a search classifier. Analyze the user query and conversation history to determine how to handle it.
 
-Return ONLY the search query (under 80 characters) if the message requires real-time or recent information: weather, news, sports scores, stock/crypto prices, live events, recent product releases, current people/roles, or anything where the answer may have changed since mid-2025.
-
-For live data queries (prices, rates, scores) write the query as a human would search right now — use words like "today", "now", "live", "current" rather than inserting the date directly into the query.
-
-Examples:
-"How are you?" → NO_SEARCH
-"What is Python?" → NO_SEARCH
-"Write me a poem" → NO_SEARCH
-"Help me fix this code" → NO_SEARCH
-"What's the weather in Hong Kong tomorrow?" → weather Hong Kong tomorrow forecast
-"Latest iPhone release" → latest iPhone model released 2026
-"Bitcoin price" → Bitcoin price today live
-"BTC/USD" → BTC USD price now
-"Who is the US president?" → current US president 2026
-"AAPL stock price" → AAPL stock price today
-
-User message: `;
+You MUST respond with ONLY valid JSON in this exact format — no explanation, no markdown, no extra text:
+{
+  "classification": {
+    "skipSearch": boolean,
+    "showWeatherWidget": boolean,
+    "showStockWidget": boolean
+  },
+  "standaloneFollowUp": string
 }
 
-export async function extractSearchQuery(
+Label definitions:
+- skipSearch: Set true if the query can be fully answered from general knowledge (greetings, math, coding help, writing, explanations, historical facts). Set false if it needs real-time or recent information. DEFAULT TO FALSE WHEN UNCERTAIN.
+- showWeatherWidget: Set true if the user is asking about weather or a forecast for a specific location (current or future). When true, also set skipSearch to true.
+- showStockWidget: Set true if the user is asking about the current price of a cryptocurrency, stock, commodity, or exchange rate. When true, also set skipSearch to true.
+- standaloneFollowUp: A self-contained, context-independent reformulation of the user's query. Use the conversation history to resolve pronouns and follow-ups. Example: if the prior topic was Hong Kong weather and the user says "what about next 7 days", write "weather Hong Kong 7 day forecast". Keep it concise (under 80 characters).`;
+
+function buildUserMessage(
+  userMessage: string,
+  context: { role: string; content: string }[]
+): string {
+  const historyBlock =
+    context.length > 0
+      ? `<conversation_history>\n${context
+          .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+          .join("\n")}\n</conversation_history>\n`
+      : "";
+  return `${historyBlock}<user_query>\n${userMessage}\n</user_query>`;
+}
+
+const FALLBACK_RESULT: ClassifierResult = {
+  skipSearch: false,
+  showWeatherWidget: false,
+  showStockWidget: false,
+  standaloneFollowUp: "",
+};
+
+export async function classifyQuery(
   userMessage: string,
   provider: any,
-  model: any
-): Promise<string | null> {
-  if (!userMessage || userMessage.trim().length < 10) {
-    return null;
+  model: any,
+  context: { role: string; content: string }[] = []
+): Promise<ClassifierResult> {
+  if (!userMessage || userMessage.trim().length < 3) {
+    return { ...FALLBACK_RESULT, skipSearch: true, standaloneFollowUp: userMessage };
   }
 
   const messages: ChatMessage[] = [
-    {
-      role: "system",
-      content: "You are a search classifier. Return ONLY the search query or 'NO_SEARCH'. No explanations, no formatting.",
-    },
-    {
-      role: "user",
-      content: `${buildExtractionPrompt()}"${userMessage}"`,
-    },
+    { role: "system", content: CLASSIFIER_SYSTEM },
+    { role: "user", content: buildUserMessage(userMessage, context) },
   ];
 
   try {
-    const stream = await streamChat({
-      provider,
-      model,
-      messages,
-      stream: true,
-    });
+    const stream = await streamChat({ provider, model, messages, stream: true });
 
     const reader = stream.getReader();
     const decoder = new TextDecoder();
-    let query = "";
+    let raw = "";
     let buffer = "";
 
     while (true) {
@@ -73,33 +81,39 @@ export async function extractSearchQuery(
         try {
           const json = JSON.parse(line);
           const content = json.choices?.[0]?.delta?.content || json.choices?.[0]?.text;
-          if (content) query += content;
+          if (content) raw += content;
         } catch {
-          // skip non-JSON lines
+          // skip non-JSON SSE lines
         }
       }
     }
 
-    console.log("[Search extractor] raw query length:", query.length, "preview:", query.slice(0, 100));
+    // Strip thinking blocks from reasoning models
+    raw = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 
-    // Strip thinking blocks emitted by reasoning models
-    query = query.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-    query = query.replace(/^["']|["']$/g, "").trim();
+    console.log("[Classifier] raw output:", raw.slice(0, 200));
 
-    console.log("[Search extractor] cleaned query:", query);
-
-    if (query === "NO_SEARCH" || query.length === 0) {
-      return null;
+    // Extract JSON — handle markdown code fences if the model wraps it
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn("[Classifier] no JSON found in output");
+      return { ...FALLBACK_RESULT, standaloneFollowUp: userMessage };
     }
 
-    if (query.length < 200) {
-      return query;
-    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    const cls = parsed.classification ?? {};
 
-    console.log("[Search extractor] query rejected (length:", query.length, ")");
-    return null;
+    const result: ClassifierResult = {
+      skipSearch:         !!cls.skipSearch,
+      showWeatherWidget:  !!cls.showWeatherWidget,
+      showStockWidget:    !!cls.showStockWidget,
+      standaloneFollowUp: (parsed.standaloneFollowUp ?? userMessage).slice(0, 200),
+    };
+
+    console.log("[Classifier] result:", result);
+    return result;
   } catch (error) {
-    console.error("[Search extractor] failed:", error);
-    return null;
+    console.error("[Classifier] failed:", error);
+    return { ...FALLBACK_RESULT, standaloneFollowUp: userMessage };
   }
 }
