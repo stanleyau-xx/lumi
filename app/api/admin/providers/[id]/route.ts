@@ -4,17 +4,11 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { encrypt } from "@/lib/encryption";
 
-const PRIVATE_IP_RE = /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|0\.0\.0\.0|::1$|fc00:|fe80:)/i;
-
 function validateBaseUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return "Base URL must use http or https";
-    }
-    const host = parsed.hostname.toLowerCase();
-    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || PRIVATE_IP_RE.test(host)) {
-      return "Base URL must not point to a private or internal address";
     }
     return null;
   } catch {
