@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
 import { streamChat, ChatMessage } from "@/lib/providers";
 import { search, formatSearchResults, getSearXNGConfig } from "@/lib/searxng";
+import { fetchWeather, extractWeatherLocation } from "@/lib/weather";
 import { extractSearchQuery } from "@/lib/search-extractor";
 import { ocrPdfBuffer } from "@/lib/ocr";
 
@@ -268,15 +269,30 @@ export async function POST(
       console.log("[Search] query:", searchQuery, "| force:", forceSearch, "| auto:", autoSearch);
 
       if (searchQuery) {
-        const results = await search(searchQuery);
-        console.log("[Search] results count:", results.length);
-        searchResults = formatSearchResults(results);
+        // For weather queries use wttr.in directly — SearXNG snippets never contain live conditions
+        const weatherLocation = extractWeatherLocation(searchQuery);
+        if (weatherLocation) {
+          const weatherData = await fetchWeather(weatherLocation);
+          if (weatherData) {
+            console.log("[Search] weather fetched for:", weatherLocation);
+            searchResults = weatherData;
+          }
+        }
 
-        const searchSystemIndex = chatMessages.findIndex((m) => m.role === "system");
-        if (searchSystemIndex >= 0) {
-          chatMessages[searchSystemIndex].content += `\n\n${searchResults}`;
-        } else {
-          chatMessages.push({ role: "system", content: searchResults });
+        // Fall back to SearXNG for non-weather queries (or if wttr.in failed)
+        if (!searchResults) {
+          const results = await search(searchQuery);
+          console.log("[Search] results count:", results.length);
+          searchResults = formatSearchResults(results);
+        }
+
+        if (searchResults) {
+          const searchSystemIndex = chatMessages.findIndex((m) => m.role === "system");
+          if (searchSystemIndex >= 0) {
+            chatMessages[searchSystemIndex].content += `\n\n${searchResults}`;
+          } else {
+            chatMessages.push({ role: "system", content: searchResults });
+          }
         }
       }
     } catch (error) {
