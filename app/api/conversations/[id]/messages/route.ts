@@ -18,8 +18,11 @@ export async function GET(
     .where(eq(schema.conversations.id, id))
     .get();
 
-  if (!conversation || conversation.userId !== session.user.id) {
+  if (!conversation) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (conversation.userId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const messages = db.select().from(schema.messages)

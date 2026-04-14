@@ -3,6 +3,17 @@ import { auth } from "@/auth";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { encrypt, decrypt } from "@/lib/encryption";
+
+function safeDecrypt(value: string): string {
+  if (!value) return "";
+  try {
+    return decrypt(value);
+  } catch {
+    // Value was stored unencrypted before this fix — return empty so admin re-enters it
+    return "";
+  }
+}
 
 export async function GET() {
   const session = await auth();
@@ -19,8 +30,8 @@ export async function GET() {
     enabled: get("searxng_enabled")?.value === "true",
     defaultLanguage: get("searxng_default_language")?.value || "en",
     safeSearch: parseInt(get("searxng_safe_search")?.value || "0", 10),
-    username: get("searxng_username")?.value || "",
-    password: get("searxng_password")?.value || "",
+    username: safeDecrypt(get("searxng_username")?.value || ""),
+    password: safeDecrypt(get("searxng_password")?.value || ""),
   });
 }
 
@@ -47,8 +58,8 @@ export async function PATCH(request: Request) {
   if (enabled !== undefined) upsert("searxng_enabled", enabled ? "true" : "false");
   if (defaultLanguage !== undefined) upsert("searxng_default_language", defaultLanguage);
   if (safeSearch !== undefined) upsert("searxng_safe_search", safeSearch.toString());
-  if (username !== undefined) upsert("searxng_username", username);
-  if (password !== undefined) upsert("searxng_password", password);
+  if (username !== undefined) upsert("searxng_username", username ? encrypt(username) : "");
+  if (password !== undefined) upsert("searxng_password", password ? encrypt(password) : "");
 
   return NextResponse.json({ success: true });
 }

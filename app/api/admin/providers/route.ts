@@ -7,6 +7,24 @@ import { encrypt } from "@/lib/encryption";
 import { getDefaultModels } from "@/lib/providers/defaults";
 import { v4 as uuidv4 } from "uuid";
 
+const PRIVATE_IP_RE = /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|0\.0\.0\.0|::1$|fc00:|fe80:)/i;
+
+function validateBaseUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "Base URL must use http or https";
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || PRIVATE_IP_RE.test(host)) {
+      return "Base URL must not point to a private or internal address";
+    }
+    return null;
+  } catch {
+    return "Base URL is not a valid URL";
+  }
+}
+
 export async function GET() {
   const session = await auth();
 
@@ -41,6 +59,11 @@ export async function POST(request: Request) {
 
   if (!name || !type) {
     return NextResponse.json({ error: "Name and type are required" }, { status: 400 });
+  }
+
+  if (baseUrl) {
+    const urlError = validateBaseUrl(baseUrl);
+    if (urlError) return NextResponse.json({ error: urlError }, { status: 400 });
   }
 
   const id = uuidv4();

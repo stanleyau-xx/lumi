@@ -65,8 +65,11 @@ export async function POST(
     .where(eq(schema.conversations.id, id))
     .get();
 
-  if (!conversation || conversation.userId !== session.user.id) {
+  if (!conversation) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (conversation.userId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // ── Parse multipart form data ─────────────────────────────────────────────
@@ -86,7 +89,21 @@ export async function POST(
   let processedContent = content;
   const imageAttachments: ImageAttachment[] = [];
 
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+  const MAX_PDF_BYTES   = 20 * 1024 * 1024; // 20 MB
+  const MAX_SHEET_BYTES = 10 * 1024 * 1024; // 10 MB
+
   for (const file of files) {
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const isImage = file.type.startsWith("image/");
+    const sizeLimit = isPdf ? MAX_PDF_BYTES : isImage ? MAX_IMAGE_BYTES : MAX_SHEET_BYTES;
+    const sizeLabelMB = sizeLimit / (1024 * 1024);
+
+    if (file.size > sizeLimit) {
+      processedContent += `\n\n[${file.name} — skipped, exceeds ${sizeLabelMB} MB limit]`;
+      continue;
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     if (file.type.startsWith("image/")) {
       imageAttachments.push({
