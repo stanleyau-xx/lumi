@@ -14,7 +14,6 @@ A self-hosted AI chat platform built with Next.js. Connect your own API keys —
 - **Weather widget** 🌤️ — 7-day forecast for any city, live data
 - **Multi-user auth** 👥 — admin and user roles, local accounts
 - **Admin panel** ⚙️ — manage providers, models, users, and global settings
-- **Dark / light mode** — responsive UI that works on mobile
 - **SQLite** 🔒 — no external database needed
 
 ---
