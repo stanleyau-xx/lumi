@@ -91,9 +91,12 @@ export async function POST(
   let processedContent = content;
   const imageAttachments: ImageAttachment[] = [];
 
-  const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
-  const MAX_PDF_BYTES   = 20 * 1024 * 1024; // 20 MB
-  const MAX_SHEET_BYTES = 10 * 1024 * 1024; // 10 MB
+  const getSettingMB = (key: string, fallback: string) =>
+    parseInt(db.select().from(schema.settings).where(eq(schema.settings.key, key)).get()?.value || fallback, 10) * 1024 * 1024;
+
+  const MAX_IMAGE_BYTES = getSettingMB("file_size_limit_mb", "10");
+  const MAX_PDF_BYTES   = getSettingMB("file_size_limit_pdf_mb", "20");
+  const MAX_SHEET_BYTES = getSettingMB("file_size_limit_sheet_mb", "10");
 
   for (const file of files) {
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");

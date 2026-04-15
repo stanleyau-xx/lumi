@@ -18,5 +18,9 @@ export async function POST(request: Request) {
 
   const result = await testSearXNGConnection(url);
 
+  if (!result.success) {
+    return NextResponse.json({ error: result.error || "Connection failed" }, { status: 502 });
+  }
+
   return NextResponse.json(result);
 }

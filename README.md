@@ -1,99 +1,64 @@
-# Lumi - AI Chat
+# Lumi 🤖
 
-A self-hosted AI chat application built with Next.js. Connect your own API keys for OpenAI, Anthropic, Google, and other providers — your data stays on your server.
-
-## Features
-
-- **Multi-provider support** — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, MiniMax, and any OpenAI-compatible endpoint
-- **Streaming responses** with stop/resume
-- **Message branching** — edit any message and explore alternative responses
-- **File attachments** — PDF, spreadsheets, images with OCR support
-- **Smart web search** — SearXNG integration for real-time information; automatically triggers when queries need current data
-- **Real-time weather** — 7-day forecast widget with weather codes, fetched live for any city
-- **Real-time stock data** — Interactive charts and prices for global markets:
-  - US stocks (NVDA, AAPL, TSLA, etc.)
-  - Hong Kong (HSBC, Tencent, Alibaba, etc.)
-  - UK (HSBC UK, BP, Shell, Lloyds, etc.)
-  - Japan (Toyota, Nintendo, Sony, etc.)
-  - Europe (ASML, SAP, LVMH, etc.)
-  - Australia (CBA, BHP, etc.)
-  - Canada, China, and more
-- **Cryptocurrency** — Live prices for BTC, ETH, DOGE, SOL, SHIB, and more
-- **Multi-user** — local authentication with admin and user roles
-- **Admin panel** — manage providers, models, users, and settings
-- **Mobile-friendly** UI with dark/light mode
-- **Self-hosted** with SQLite — no external database needed
+A self-hosted AI chat platform built with Next.js. Connect your own API keys — OpenAI, Anthropic, Google, OpenRouter, Ollama, and more — so your data stays on your server, not theirs.
 
 ---
 
-## Quick Start with Docker
+## Features
 
-### Prerequisites
+- **Multi-provider** 🤝 — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, MiniMax, and any OpenAI-compatible endpoint
+- **Streaming responses** ⚡ — real-time AI output with stop and resume
+- **Message branching** 🌿 — edit any past message and explore alternative replies
+- **File attachments** 📎 — PDF, spreadsheets, images (with OCR)
+- **Smart web search** 🔍 — SearXNG integration; triggers automatically when a query needs current information
+- **Weather widget** 🌤️ — 7-day forecast for any city, live data
+- **Multi-user auth** 👥 — admin and user roles, local accounts
+- **Admin panel** ⚙️ — manage providers, models, users, and global settings
+- **Dark / light mode** — responsive UI that works on mobile
+- **SQLite** 🔒 — no external database needed
 
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+---
 
-### 1. Clone the repo
+## Quick Start (Docker)
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/stanleyau-xx/lumi.git
 cd lumi
 ```
 
-### 2. Create your environment file
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your values (see [Environment Variables](#environment-variables) below).
+Edit `.env` — see [Environment Variables](#environment-variables) below.
 
-### 3. Start
+### 3. Launch
 
 ```bash
 docker compose up -d
 ```
 
-The app will be available at `http://localhost:3000`.
-
-Log in with the admin credentials you set in `.env`. Then go to **Admin > Providers** to add your AI API keys.
+Open `http://localhost:3000` and log in with your admin credentials. Then go to **Admin → Providers** to add your AI API keys.
 
 ---
 
-## Docker Build
-
-### Build the image manually
+## Docker Commands
 
 ```bash
+# Build image manually
 docker build -t lumi .
-```
 
-### Run without Docker Compose
+# Start
+docker compose up -d
 
-```bash
-docker run -d \
-  -p 3000:3000 \
-  -e NEXTAUTH_SECRET=your-secret \
-  -e NEXTAUTH_URL=http://localhost:3000 \
-  -e ENCRYPTION_KEY=your-32-char-key \
-  -e ADMIN_USERNAME=admin \
-  -e ADMIN_PASSWORD=changeme \
-  -v lumi-data:/app/data \
-  --name lumi \
-  lumi
-```
+# Rebuild after changes
+docker compose down && docker compose up -d --build
 
-### Rebuild after code changes
-
-```bash
-docker compose down
-docker compose up -d --build
-```
-
-### Back up your data
-
-All data is stored in a SQLite database inside the container volume. To back it up:
-
-```bash
+# Backup database
 docker cp lumi:/app/data/db.sqlite ./backup-$(date +%Y%m%d).sqlite
 ```
 
@@ -102,82 +67,76 @@ docker cp lumi:/app/data/db.sqlite ./backup-$(date +%Y%m%d).sqlite
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXTAUTH_SECRET` | Yes | Secret for session signing — generate with `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Yes | Full URL your app is accessible at, e.g. `http://localhost:3000` |
-| `ENCRYPTION_KEY` | Yes | Key for encrypting stored API secrets — generate with `openssl rand -hex 32` |
-| `ADMIN_USERNAME` | Yes | Admin account username (created on first run) |
-| `ADMIN_PASSWORD` | Yes | Admin account password |
-| `DATABASE_URL` | No | SQLite path (default: `file:/app/data/db.sqlite`) |
+|----------|:--------:|-------------|
+| `NEXTAUTH_SECRET` | ✅ | Session signing secret — `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | ✅ | Full URL of your app, e.g. `http://localhost:3000` |
+| `ENCRYPTION_KEY` | ✅ | Encrypts stored API keys — `openssl rand -hex 32` |
+| `ADMIN_USERNAME` | ✅ | Admin login username |
+| `ADMIN_PASSWORD` | ✅ | Admin login password |
+| `DATABASE_URL` | ❌ | SQLite path (default: `file:/app/data/db.sqlite`) |
 
-> AI provider API keys (OpenAI, Anthropic, etc.) are added through the admin panel — not via environment variables.
+> AI API keys are configured through the Admin panel — not in environment variables.
 
 ---
 
-## Deploying with Portainer
+## Deploy to Portainer
 
-1. Go to **Stacks > Add stack**
+1. Create a new **Stack**
 2. Paste the contents of `docker-compose.yml`
-3. Add the required environment variables in the UI
-4. Deploy the stack
+3. Add the environment variables from `.env.example`
+4. Deploy
 
 ---
 
 ## Local Development
 
-### Prerequisites
-
-- Node.js 20+
-- npm
-
-### Setup
+Requires **Node.js 20+** and **npm**.
 
 ```bash
 npm install
 npm run dev       # starts on http://localhost:3001
 ```
 
-### Useful commands
+Useful dev commands:
 
 ```bash
 npm run build       # production build
-npm run typecheck   # TypeScript type check
+npm run typecheck   # TypeScript check
 npm run lint        # ESLint
-npm run db:studio   # Drizzle DB browser UI
+npm run db:studio   # open Drizzle DB browser
 ```
 
 ---
 
-## Adding AI Providers
+## Adding Providers and Models
 
-1. Log in as admin and go to **Admin > Providers**
-2. Click **Add Provider** and select the type
-3. Enter your API key
-4. Go to **Admin > Models**, click **Fetch Models**, then enable the ones you want
-
-Supported providers include OpenAI, Anthropic, Google Gemini, OpenRouter, MiniMax, and any OpenAI-compatible endpoint (e.g. Ollama, LM Studio).
+1. Log in as admin → **Admin → Providers**
+2. Click **Add Provider**, pick a type, paste your API key
+3. Go to **Admin → Models**, click **Fetch Models**
+4. Enable the models you want to use
 
 ---
 
 ## Web Search (SearXNG)
 
-1. Set up a [SearXNG](https://searxng.github.io/searxng/) instance (can run on the same server)
-2. Enable JSON output format in SearXNG settings
-3. In Lumi: **Admin > Search**, enter your SearXNG URL and enable it
+1. Set up [SearXNG](https://searxng.github.io/searxng/) and enable JSON output in its settings
+2. In Lumi: **Admin → Search**, enter your SearXNG URL and enable it
 
-The application automatically determines when a query requires real-time information and triggers a web search.
+Searches run automatically when a query needs real-time data — no need to ask explicitly.
 
 ---
 
 ## Tech Stack
 
-- **Framework** — Next.js 15 (App Router)
-- **Language** — TypeScript
-- **Database** — SQLite via better-sqlite3 + Drizzle ORM
-- **Auth** — NextAuth.js
-- **UI** — Tailwind CSS + shadcn/ui
-- **AI** — Vercel AI SDK, OpenAI SDK, Anthropic SDK
-- **Deployment** — Docker (multi-stage build)
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Database | SQLite + better-sqlite3 + Drizzle ORM |
+| Auth | NextAuth.js |
+| UI | Tailwind CSS + shadcn/ui |
+| AI SDK | Vercel AI SDK, OpenAI SDK, Anthropic SDK |
+| Deploy | Docker (multi-stage build) |
 
 ---
 

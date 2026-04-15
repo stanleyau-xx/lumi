@@ -15,6 +15,9 @@ type GlobalSettings = {
   systemPromptTemplate: string;
   maxHistoryMessages: number;
   rateLimitPerDay: number;
+  fileSizeLimitMB: number;
+  fileSizeLimitPdfMB: number;
+  fileSizeLimitSheetMB: number;
 };
 
 export default function SettingsAdminPage() {
@@ -25,6 +28,9 @@ export default function SettingsAdminPage() {
     systemPromptTemplate: "",
     maxHistoryMessages: 20,
     rateLimitPerDay: 0,
+    fileSizeLimitMB: 10,
+    fileSizeLimitPdfMB: 20,
+    fileSizeLimitSheetMB: 10,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -121,6 +127,52 @@ export default function SettingsAdminPage() {
                 Number of recent messages to send to the AI (sliding window)
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>File Upload Limits</CardTitle>
+            <CardDescription>Maximum file size per file type</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="fileSizeLimitMB">Images (MB)</Label>
+              <Input
+                id="fileSizeLimitMB"
+                type="number"
+                min="1"
+                max="100"
+                value={settings.fileSizeLimitMB}
+                onChange={(e) => setSettings({ ...settings, fileSizeLimitMB: parseInt(e.target.value) || 10 })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="fileSizeLimitPdfMB">PDFs (MB)</Label>
+              <Input
+                id="fileSizeLimitPdfMB"
+                type="number"
+                min="1"
+                max="100"
+                value={settings.fileSizeLimitPdfMB}
+                onChange={(e) => setSettings({ ...settings, fileSizeLimitPdfMB: parseInt(e.target.value) || 20 })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="fileSizeLimitSheetMB">Spreadsheets (MB)</Label>
+              <Input
+                id="fileSizeLimitSheetMB"
+                type="number"
+                min="1"
+                max="100"
+                value={settings.fileSizeLimitSheetMB}
+                onChange={(e) => setSettings({ ...settings, fileSizeLimitSheetMB: parseInt(e.target.value) || 10 })}
+                className="mt-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Max: 100 MB per file type.</p>
           </CardContent>
         </Card>
 
