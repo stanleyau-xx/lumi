@@ -2,28 +2,42 @@ import { streamChat, ChatMessage } from "./providers";
 
 export type ClassifierResult = {
   skipSearch: boolean;
+  personalSearch: boolean;
+  academicSearch: boolean;
+  discussionSearch: boolean;
   showWeatherWidget: boolean;
   showStockWidget: boolean;
+  showCalculationWidget: boolean;
   standaloneFollowUp: string;
 };
 
 const CLASSIFIER_SYSTEM = `You are a search classifier. Analyze the user query and conversation history to determine how to handle it.
 
+IMPORTANT: By "general knowledge" we mean ONLY information that is OBVIOUS, WIDELY KNOWN, and CANNOT HAVE CHANGED — for example: mathematical facts (2+2=4), basic scientific knowledge, common historical events, well-known facts that predate your training cutoff.
+
 You MUST respond with ONLY valid JSON in this exact format — no explanation, no markdown, no extra text:
 {
   "classification": {
     "skipSearch": boolean,
+    "personalSearch": boolean,
+    "academicSearch": boolean,
+    "discussionSearch": boolean,
     "showWeatherWidget": boolean,
-    "showStockWidget": boolean
+    "showStockWidget": boolean,
+    "showCalculationWidget": boolean
   },
   "standaloneFollowUp": string
 }
 
-Label definitions:
-- skipSearch: Set true if the query can be fully answered from general knowledge (greetings, math, coding help, writing, explanations, historical facts). Set false if it needs real-time or recent information. DEFAULT TO FALSE WHEN UNCERTAIN.
-- showWeatherWidget: Set true if the user is asking about weather or a forecast for a specific location (current or future). When true, also set skipSearch to true.
-- showStockWidget: Set true if the user is asking about the current price of a cryptocurrency, stock, commodity, or exchange rate. When true, also set skipSearch to true.
-- standaloneFollowUp: A self-contained, context-independent reformulation of the user's query. Use the conversation history to resolve pronouns and follow-ups. Example: if the prior topic was Hong Kong weather and the user says "what about next 7 days", write "weather Hong Kong 7 day forecast". Keep it concise (under 80 characters).`;
+Label definitions — be VERY STRICT:
+1. skipSearch: ONLY set true if the query is about OBVIOUS, UNCHANGING general knowledge — greetings, basic math, well-known historical facts that cannot have changed. Set it to FALSE if the query asks about: current policies, airline rules, company policies, laws, regulations, prices, availability, or anything that could have changed after your training data. **ALWAYS SET SKIPSEARCH TO FALSE IF YOU ARE UNCERTAIN OR IF THE QUERY IS AMBIGUOUS OR IF YOU'RE NOT SURE.**
+2. personalSearch: Set true if the user explicitly asks about their uploaded documents or files.
+3. academicSearch: Set true if the user explicitly asks for scholarly articles, research papers, or citations.
+4. discussionSearch: Set true if the user asks for opinions, community discussions, forums, reviews, or personal experiences.
+5. showWeatherWidget: ALWAYS set true if the user asks about weather in ANY way — "weather in London", "will it rain tomorrow", "show me weather", "is it sunny". The weather widget will fetch real-time data.
+6. showStockWidget: ALWAYS set true if the user asks about stock prices, cryptocurrency prices, commodity prices, or exchange rates. The stock widget will fetch real-time data. Set skipSearch to FALSE as well when this is true.
+7. showCalculationWidget: Set true if the user asks for mathematical calculations, conversions, or computations.
+8. standaloneFollowUp: A self-contained reformulation of the query that can be understood without conversation history. Resolve pronouns (e.g., "what about that?" → "weather in Hong Kong"). Under 80 characters.`
 
 function buildUserMessage(
   userMessage: string,
@@ -40,8 +54,12 @@ function buildUserMessage(
 
 const FALLBACK_RESULT: ClassifierResult = {
   skipSearch: false,
+  personalSearch: false,
+  academicSearch: false,
+  discussionSearch: false,
   showWeatherWidget: false,
   showStockWidget: false,
+  showCalculationWidget: false,
   standaloneFollowUp: "",
 };
 
@@ -104,9 +122,13 @@ export async function classifyQuery(
     const cls = parsed.classification ?? {};
 
     const result: ClassifierResult = {
-      skipSearch:         !!cls.skipSearch,
-      showWeatherWidget:  !!cls.showWeatherWidget,
-      showStockWidget:    !!cls.showStockWidget,
+      skipSearch: !!cls.skipSearch,
+      personalSearch: !!cls.personalSearch,
+      academicSearch: !!cls.academicSearch,
+      discussionSearch: !!cls.discussionSearch,
+      showWeatherWidget: !!cls.showWeatherWidget,
+      showStockWidget: !!cls.showStockWidget,
+      showCalculationWidget: !!cls.showCalculationWidget,
       standaloneFollowUp: (parsed.standaloneFollowUp ?? userMessage).slice(0, 200),
     };
 

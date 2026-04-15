@@ -7,7 +7,7 @@ export type ChatMessage = {
   content: string | Array<{ type: string; [key: string]: any }>;
 };
 
-type Provider = {
+export type Provider = {
   id: string;
   name: string;
   type: string;
@@ -17,7 +17,7 @@ type Provider = {
   oauthAccessToken: string | null;
 };
 
-type Model = {
+export type Model = {
   id: string;
   providerId: string;
   modelId: string;

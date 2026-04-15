@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
 import { streamChat, ChatMessage } from "@/lib/providers";
 import { search, formatSearchResults, getSearXNGConfig } from "@/lib/searxng";
-import { fetchWeather } from "@/lib/weather";
+import { fetchWeather, fetchWeatherStructured, extractWeatherLocation } from "@/lib/weather";
 import { fetchStockWidget } from "@/lib/stock-widget";
 import { classifyQuery } from "@/lib/search-extractor";
 import { ocrPdfBuffer } from "@/lib/ocr";
@@ -257,10 +257,14 @@ export async function POST(
   const forceSearch = searchEnabled ?? conversation.searchEnabled;
   const searxngConfig = await getSearXNGConfig();
   const autoSearch = !!(searxngConfig?.enabled && searxngConfig?.url);
+  let weatherResult = "";
   let searchResults = "";
   let stockTicker: string | null = null; // set when a stock/crypto widget is fetched
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let weatherWidgetData: any = null; // structured data for the visual weather card
 
-  if ((forceSearch || autoSearch) && convProvider && convModel) {
+  // ── Run classifier and fetch data (widgets ALWAYS run, search respects skipSearch) ──
+  if (convProvider && convModel) {
     try {
       // Pass the last few turns so the classifier can resolve follow-up questions in context
       const classifierContext = existingMessages
@@ -273,50 +277,70 @@ export async function POST(
 
       console.log("[Search] classification:", classification, "| force:", forceSearch, "| auto:", autoSearch);
 
-      // If force mode is on, always search even when the classifier says skipSearch
-      const shouldSearch = forceSearch ? true : !skipSearch;
+      // ── Widgets ALWAYS run when their flags are set (regardless of skipSearch) ──
+      if (showWeatherWidget) {
+        // Use LLM to extract location — handles any language (Chinese, English, etc.)
+        // Mirrors Vane-MU's weatherWidget location extraction approach
+        const { location, notPresent } = await extractWeatherLocation(
+          resolvedQuery,
+          convProvider,
+          convModel,
+          classifierContext,
+        );
 
-      if (shouldSearch) {
-        if (showWeatherWidget) {
-          // Weather — use wttr.in structured API; strip any non-location words
-          const location = resolvedQuery
-            .replace(/^weather\s+/i, "")
-            .replace(/\s+(today|tomorrow|now|tonight|this week|weekly|hourly|current|live|forecast|7 day.*|next \d+ days?.*)$/i, "")
-            .trim();
-          const weatherData = await fetchWeather(location || resolvedQuery);
-          if (weatherData) {
-            console.log("[Search] weather fetched for:", location);
-            searchResults = weatherData;
+        if (!notPresent && location) {
+          // Fetch structured data for the visual widget (Open-Meteo with WMO codes)
+          const structured = await fetchWeatherStructured(location);
+          if (structured) {
+            weatherWidgetData = structured;
+            console.log("[Search] weather widget data for:", location);
           }
-        } else if (showStockWidget) {
-          // Stock / crypto — fetch via yahoo-finance2, renders full chart widget
-          const assetQuery = resolvedQuery
-            .replace(/\b(price|cost|value|today|now|live|current|usd|eur|hkd)\b/gi, "")
-            .replace(/[?]/g, "")
-            .trim();
-          const widgetResult = await fetchStockWidget(assetQuery || resolvedQuery);
-          if (widgetResult) {
-            console.log("[Search] stock widget fetched for:", widgetResult.ticker);
-            stockTicker = widgetResult.ticker;
-            // Inject structured context for the AI response
-            searchResults = `REAL-TIME MARKET DATA (fetched just now):\n${widgetResult.llmContext}\n\nINSTRUCTION: Write ONE sentence with the current price and 24h change. Do not repeat any number more than once.`;
+          // Also fetch text context for the LLM system prompt
+          const textResult = await fetchWeather(location);
+          if (textResult) {
+            weatherResult = textResult;
+          }
+        } else {
+          console.warn("[Search] weather requested but no valid location extracted");
+        }
+      } else if (showStockWidget) {
+        const assetQuery = resolvedQuery
+          .replace(/\b(price|cost|value|today|now|live|current|usd|eur|hkd)\b/gi, "")
+          .replace(/[?]/g, "")
+          .trim();
+        const widgetResult = await fetchStockWidget(assetQuery || resolvedQuery);
+        if (widgetResult) {
+          console.log("[Search] stock widget fetched for:", widgetResult.ticker);
+          stockTicker = widgetResult.ticker;
+          // Inject structured context for the AI response
+          searchResults = `REAL-TIME MARKET DATA (fetched just now):\n${widgetResult.llmContext}\n\nINSTRUCTION: Write ONE sentence with the current price and 24h change. Do not repeat any number more than once.`;
+        }
+      }
+
+      // ── Web search runs when skipSearch=false (classifier says search needed), OR when forceSearch=true ──
+      const shouldSearchWeb = (!skipSearch) || forceSearch;
+      if (shouldSearchWeb && !searchResults) {
+        // Skip if we already got stock or weather widget data
+        if (!showStockWidget && !showWeatherWidget) {
+          try {
+            const results = await search(resolvedQuery);
+            console.log("[Search] SearXNG results count:", results.length);
+            searchResults = formatSearchResults(results);
+          } catch (searchErr) {
+            // Swallow search errors — widgets already provided real-time data
+            console.warn("[Search] SearXNG search failed:", searchErr);
           }
         }
+      }
 
-        // Fall back to SearXNG for general queries or when a widget API returned nothing
-        if (!searchResults) {
-          const results = await search(resolvedQuery);
-          console.log("[Search] SearXNG results count:", results.length);
-          searchResults = formatSearchResults(results);
-        }
-
-        if (searchResults) {
-          const searchSystemIndex = chatMessages.findIndex((m) => m.role === "system");
-          if (searchSystemIndex >= 0) {
-            chatMessages[searchSystemIndex].content += `\n\n${searchResults}`;
-          } else {
-            chatMessages.push({ role: "system", content: searchResults });
-          }
+      // ── Build system context from all fetched data ──
+      const allContext = [weatherResult, searchResults].filter(Boolean).join("\n\n");
+      if (allContext) {
+        const searchSystemIndex = chatMessages.findIndex((m) => m.role === "system");
+        if (searchSystemIndex >= 0) {
+          chatMessages[searchSystemIndex].content += `\n\n${allContext}`;
+        } else {
+          chatMessages.push({ role: "system", content: allContext });
         }
       }
     } catch (error) {
@@ -368,11 +392,19 @@ export async function POST(
       let usedProvider = convProvider;
       let usedModel = convModel;
 
+      // Prepend weather widget data so the frontend can render the visual card
+      if (weatherWidgetData) {
+        const weatherJson = JSON.stringify(weatherWidgetData);
+        const marker = `[WEATHER]${weatherJson}[/WEATHER]\n`;
+        controller.enqueue(encoder.encode(marker));
+        fullContent = marker;
+      }
+
       // Prepend stock ticker marker so the frontend can render the widget
       if (stockTicker) {
         const marker = `[STOCK:${stockTicker}]\n`;
         controller.enqueue(encoder.encode(marker));
-        fullContent = marker;
+        fullContent += marker;
       }
 
       try {

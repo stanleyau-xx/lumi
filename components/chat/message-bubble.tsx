@@ -66,7 +66,7 @@ function ThinkingBlock({ thinking, isThinking }: { thinking: string | null; isTh
       >
         <Brain className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-left font-medium text-xs">
-          {isThinking ? "Thinking…" : "Thought process"}
+          {isThinking ? "Researching…" : "Thought process"}
         </span>
         {isThinking ? (
           <span className="flex gap-0.5">
@@ -400,7 +400,7 @@ export function MessageBubble({
           )}
         </div>
         {/* Controls row below bubble: copy · edit (desktop only) · version nav · timestamp */}
-        {!isEditing && (
+        {!isStreaming && !isEditing && (
           <div className="flex items-center gap-0.5 text-muted-foreground">
             <button onClick={copyToClipboard}
               className="rounded p-1 hover:text-foreground transition-colors" title="Copy">

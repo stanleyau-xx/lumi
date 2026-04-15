@@ -4,11 +4,21 @@ A self-hosted AI chat application built with Next.js. Connect your own API keys 
 
 ## Features
 
-- **Multi-provider support** — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, and more
+- **Multi-provider support** — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, MiniMax, and any OpenAI-compatible endpoint
 - **Streaming responses** with stop/resume
 - **Message branching** — edit any message and explore alternative responses
 - **File attachments** — PDF, spreadsheets, images with OCR support
-- **Web search** — SearXNG integration for grounded responses
+- **Smart web search** — SearXNG integration for real-time information; automatically triggers when queries need current data
+- **Real-time weather** — 7-day forecast widget with weather codes, fetched live for any city
+- **Real-time stock data** — Interactive charts and prices for global markets:
+  - US stocks (NVDA, AAPL, TSLA, etc.)
+  - Hong Kong (HSBC, Tencent, Alibaba, etc.)
+  - UK (HSBC UK, BP, Shell, Lloyds, etc.)
+  - Japan (Toyota, Nintendo, Sony, etc.)
+  - Europe (ASML, SAP, LVMH, etc.)
+  - Australia (CBA, BHP, etc.)
+  - Canada, China, and more
+- **Cryptocurrency** — Live prices for BTC, ETH, DOGE, SOL, SHIB, and more
 - **Multi-user** — local authentication with admin and user roles
 - **Admin panel** — manage providers, models, users, and settings
 - **Mobile-friendly** UI with dark/light mode
@@ -151,9 +161,11 @@ Supported providers include OpenAI, Anthropic, Google Gemini, OpenRouter, MiniMa
 
 ## Web Search (SearXNG)
 
-1. Set up a [SearXNG](https://searxng.github.io/searxng/) instance (can run on the same NAS)
+1. Set up a [SearXNG](https://searxng.github.io/searxng/) instance (can run on the same server)
 2. Enable JSON output format in SearXNG settings
-3. In Lumi: **Admin > Search**, enter your SearXNG URL and test the connection
+3. In Lumi: **Admin > Search**, enter your SearXNG URL and enable it
+
+The application automatically determines when a query requires real-time information and triggers a web search.
 
 ---
 

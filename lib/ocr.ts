@@ -1,57 +1,38 @@
-/**
- * Server-side OCR for scanned/image-based PDFs.
- *
- * Flow: PDF buffer → pdfjs-dist renders pages to canvas → tesseract.js OCR → text
- *
- * Uses require() for all CJS packages to avoid ESM/CJS interop issues in Next.js.
- */
+import { createWorker, type Worker as TesseractWorker } from "tesseract.js";
+import { createCanvas, type Canvas } from "canvas";
 
-// Lazy-loaded singleton Tesseract worker — created on first OCR request, reused thereafter
-let workerPromise: Promise<any> | null = null;
-
-function getWorker(): Promise<any> {
-  if (workerPromise) return workerPromise;
-  workerPromise = (async () => {
-    const Tesseract = require("tesseract.js");
-    const worker = await Tesseract.createWorker("eng");
-    return worker;
-  })();
-  return workerPromise;
+interface CanvasPair {
+  canvas: Canvas;
+  context: ReturnType<Canvas["getContext"]>;
 }
 
-/**
- * NodeCanvasFactory — required by pdfjs-dist for rendering in Node.js.
- * Bridges pdfjs-dist's internal canvas creation to the `canvas` npm package.
- */
-function createNodeCanvasFactory() {
-  const { createCanvas } = require("canvas");
+function createNodeCanvasFactory(): {
+  create: (width: number, height: number) => CanvasPair;
+  destroy: (pair: CanvasPair) => void;
+} {
+  const canvasCache = new Map<number, Canvas>();
 
   return {
-    create(width: number, height: number) {
+    create(width: number, height: number): CanvasPair {
       const canvas = createCanvas(width, height);
       const context = canvas.getContext("2d");
-      return { canvas, context };
+      return { canvas, context: context as unknown as ReturnType<Canvas["getContext"]> };
     },
-    reset(pair: any, width: number, height: number) {
-      pair.canvas.width = width;
-      pair.canvas.height = height;
-    },
-    destroy(pair: any) {
-      pair.canvas.width = 0;
-      pair.canvas.height = 0;
-      pair.canvas = null;
-      pair.context = null;
+    destroy(pair: CanvasPair): void {
+      // no-op for canvas; let GC handle it
     },
   };
 }
 
-/**
- * OCR a PDF buffer — renders each page as an image, then runs Tesseract.
- *
- * @param pdfBuffer - Raw PDF file as a Buffer
- * @param maxPages  - Maximum pages to OCR (default 20)
- * @returns Extracted text and total page count
- */
+let workerCache: TesseractWorker | null = null;
+
+async function getWorker(): Promise<TesseractWorker> {
+  if (!workerCache) {
+    workerCache = await createWorker("eng");
+  }
+  return workerCache;
+}
+
 export async function ocrPdfBuffer(
   pdfBuffer: Buffer,
   maxPages = 20
@@ -65,7 +46,6 @@ export async function ocrPdfBuffer(
 
   const doc = await pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
-    canvasFactory,
   }).promise;
 
   const pageCount = doc.numPages;
@@ -79,17 +59,19 @@ export async function ocrPdfBuffer(
     // Scale 2x for better OCR accuracy
     const viewport = page.getViewport({ scale: 2.0 });
 
-    const pair = canvasFactory.create(viewport.width, viewport.height);
+    const { canvas, context } = canvasFactory.create(viewport.width, viewport.height);
 
     await page.render({
-      canvasContext: pair.context,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      canvasContext: context as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      canvas: canvas as any,
       viewport,
-      canvasFactory,
     }).promise;
 
     // Convert canvas to PNG buffer for Tesseract
-    const pngBuffer: Buffer = pair.canvas.toBuffer("image/png");
-    canvasFactory.destroy(pair);
+    const pngBuffer: Buffer = canvas.toBuffer("image/png");
+    canvasFactory.destroy({ canvas, context });
 
     const {
       data: { text },
