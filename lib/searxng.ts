@@ -84,6 +84,17 @@ export async function testSearXNGConnection(
   url: string
 ): Promise<{ success: boolean; error?: string; results?: SearchResult[] }> {
   try {
+    // Basic URL validation: check protocol and format
+    let urlObj: URL;
+    try {
+      urlObj = new URL(url);
+    } catch {
+      return { success: false, error: 'Invalid URL format' };
+    }
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      return { success: false, error: 'Only HTTP and HTTPS protocols are allowed' };
+    }
+
     const cleanUrl = url.replace(/\/$/, "");
     const response = await fetch(`${cleanUrl}/search?q=test&format=json&engines=google&lang=en`, {
       headers: { Accept: "application/json" },
