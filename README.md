@@ -65,14 +65,14 @@ docker cp lumi:/app/data/db.sqlite ./backup-$(date +%Y%m%d).sqlite
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|:--------:|-------------|
-| `NEXTAUTH_SECRET` | ✅ | Session signing secret — `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | ✅ | Full URL of your app, e.g. `http://localhost:3000` |
-| `ENCRYPTION_KEY` | ✅ | Encrypts stored API keys — `openssl rand -hex 32` |
-| `ADMIN_USERNAME` | ✅ | Admin login username |
-| `ADMIN_PASSWORD` | ✅ | Admin login password |
-| `DATABASE_URL` | ❌ | SQLite path (default: `file:/app/data/db.sqlite`) |
+| Variable | Description |
+|----------|-------------|
+| `NEXTAUTH_SECRET` | Session signing secret — `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | Full URL of your app, e.g. `http://localhost:3000` |
+| `ENCRYPTION_KEY` | Encrypts stored API keys — `openssl rand -hex 32` |
+| `ADMIN_USERNAME` | Admin login username |
+| `ADMIN_PASSWORD` | Admin login password |
+| `DATABASE_URL` | SQLite path (default: `file:/app/data/db.sqlite`) |
 
 > AI API keys are configured through the Admin panel — not in environment variables.
 
