@@ -1,4 +1,5 @@
 import { db, schema } from "@/db";
+import { lookup } from "node:dns/promises";
 
 export type SearchResult = {
   title: string;
@@ -80,23 +81,88 @@ ${formatted}
 INSTRUCTION: You are Vane, an AI model skilled in web search and crafting detailed, engaging, and well-structured answers. Provide responses that are informative, well-structured with clear headings. Every number or price you show should appear only ONCE — never repeat duplicates in tables or lists. If sources show different prices for the same item, pick the most reliable source and use that single price only. Do not create tables with repeated/duplicate values like "X-Y-Z" where Y equals X.`;
 }
 
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map((p) => Number(p));
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return false;
+
+  const [a, b] = parts;
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    a === 0
+  );
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  const normalized = ip.toLowerCase();
+  return (
+    normalized === "::1" ||
+    normalized === "::" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe80:")
+  );
+}
+
+function isIpLiteral(hostname: string): { isIp: boolean; blocked: boolean } {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+    return { isIp: true, blocked: isPrivateIPv4(hostname) };
+  }
+  if (hostname.includes(":")) {
+    return { isIp: true, blocked: isPrivateIPv6(hostname) };
+  }
+  return { isIp: false, blocked: false };
+}
+
+async function isBlockedHost(hostname: string): Promise<boolean> {
+  const literalCheck = isIpLiteral(hostname);
+  if (literalCheck.isIp) return literalCheck.blocked;
+
+  try {
+    const records = await lookup(hostname, { all: true });
+    if (!records.length) return true;
+
+    return records.some((r) =>
+      r.family === 4 ? isPrivateIPv4(r.address) : isPrivateIPv6(r.address)
+    );
+  } catch {
+    return true;
+  }
+}
+
 export async function testSearXNGConnection(
   url: string
 ): Promise<{ success: boolean; error?: string; results?: SearchResult[] }> {
   try {
-    // Basic URL validation: check protocol and format
     let urlObj: URL;
     try {
       urlObj = new URL(url);
     } catch {
-      return { success: false, error: 'Invalid URL format' };
-    }
-    if (!['http:', 'https:'].includes(urlObj.protocol)) {
-      return { success: false, error: 'Only HTTP and HTTPS protocols are allowed' };
+      return { success: false, error: "Invalid URL format" };
     }
 
-    const cleanUrl = url.replace(/\/$/, "");
-    const response = await fetch(`${cleanUrl}/search?q=test&format=json&engines=google&lang=en`, {
+    if (!["http:", "https:"].includes(urlObj.protocol)) {
+      return { success: false, error: "Only HTTP and HTTPS protocols are allowed" };
+    }
+
+    if (urlObj.username || urlObj.password) {
+      return { success: false, error: "URLs with credentials are not allowed" };
+    }
+
+    if (await isBlockedHost(urlObj.hostname)) {
+      return { success: false, error: "Target host is not allowed" };
+    }
+
+    const searchUrl = new URL("/search", urlObj);
+    searchUrl.searchParams.set("q", "test");
+    searchUrl.searchParams.set("format", "json");
+    searchUrl.searchParams.set("engines", "google");
+    searchUrl.searchParams.set("lang", "en");
+
+    const response = await fetch(searchUrl.toString(), {
       headers: { Accept: "application/json" },
     });
 
