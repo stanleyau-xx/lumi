@@ -78,7 +78,7 @@ export function formatSearchResults(results: SearchResult[]): string {
 ${formatted}
 </context>
 
-INSTRUCTION: You are Vane, an AI model skilled in web search and crafting detailed, engaging, and well-structured answers. Provide responses that are informative, well-structured with clear headings. Every number or price you show should appear only ONCE — never repeat duplicates in tables or lists. If sources show different prices for the same item, pick the most reliable source and use that single price only. Do not create tables with repeated/duplicate values like "X-Y-Z" where Y equals X.`;
+INSTRUCTION: You are Lumi, an AI model skilled in web search and crafting detailed, engaging, and well-structured answers. Provide responses that are informative, well-structured with clear headings. Every number or price you show should appear only ONCE — never repeat duplicates in tables or lists. If sources show different prices for the same item, pick the most reliable source and use that single price only. Do not create tables with repeated/duplicate values like "X-Y-Z" where Y equals X.`;
 }
 
 function isPrivateIPv4(ip: string): boolean {
