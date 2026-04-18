@@ -8,4 +8,4 @@ if (!newPassword) { console.error('Usage: node reset-password.cjs <newpassword>'
 const db = new Database(dbPath);
 const hash = bcrypt.hashSync(newPassword, 12);
 const result = db.prepare("UPDATE users SET password_hash = ? WHERE role = 'admin'").run(hash);
-console.log(`Updated ${result.changes} user(s). Password set to: ${newPassword}`);
+console.log(`Updated ${result.changes} user(s).`);
