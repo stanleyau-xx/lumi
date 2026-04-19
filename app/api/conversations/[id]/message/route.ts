@@ -281,10 +281,20 @@ export async function POST(
 
   // ── Run classifier and fetch data (widgets ALWAYS run, search respects skipSearch) ──
   // Skip classifier when editing a message — send raw edited content without context resolution
+  // Build a filtered message list for use in both classifier context and chat history
+  // Exclude superseded messages and their orphaned children (they belong to a different branch)
+  const allSupersededIds = new Set(
+    existingMessages.filter((m) => m.supersededById).map((m) => m.id)
+  );
+  const filteredMessages = existingMessages.filter(
+    (m) => !m.supersededById && !(m.parentId && allSupersededIds.has(m.parentId))
+  );
+
   if (convProvider && convModel && !replaceMessageId) {
     try {
       // Pass the last few turns so the classifier can resolve follow-up questions in context
-      const classifierContext = existingMessages
+      // Use filteredMessages so superseded branches don't pollute context resolution
+      const classifierContext = filteredMessages
         .slice(-5, -1) // up to 4 messages before the current one
         .map((m) => ({ role: m.role, content: typeof m.content === "string" ? m.content.slice(0, 300) : "" }));
 
@@ -367,18 +377,9 @@ export async function POST(
   }
 
   // All history except the last message (which is the current user turn)
-  // Filter out messages that have been superseded by an edit (they form a different branch)
-  // Also filter out messages whose parent has been superseded (orphaned from this branch)
-  const supersededIds = new Set(
-    recentMessages.slice(0, -1)
-      .filter((m) => m.supersededById)
-      .map((m) => m.id)
-  );
-  console.log("[EDIT-DEBUG] supersededIds:", [...supersededIds]);
-  for (const msg of recentMessages.slice(0, -1)) {
-    console.log("[EDIT-DEBUG]", msg.id.slice(0,8), "| role:", msg.role, "| parentId:", msg.parentId, "| supersededById:", msg.supersededById);
-    if (msg.supersededById) continue; // skip edited messages — their branch is accessible via navigation
-    if (msg.parentId && supersededIds.has(msg.parentId)) continue; // skip orphaned children of superseded messages
+  // Use filteredMessages (already excludes superseded branches) for clean context
+  const filteredRecent = filteredMessages.slice(-maxHistory);
+  for (const msg of filteredRecent.slice(0, -1)) {
     chatMessages.push({
       role: msg.role as "system" | "user" | "assistant",
       content: msg.content,
