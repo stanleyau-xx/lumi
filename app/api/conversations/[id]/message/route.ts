@@ -366,8 +366,15 @@ export async function POST(
 
   // All history except the last message (which is the current user turn)
   // Filter out messages that have been superseded by an edit (they form a different branch)
+  // Also filter out messages whose parent has been superseded (orphaned from this branch)
+  const supersededIds = new Set(
+    recentMessages.slice(0, -1)
+      .filter((m) => m.supersededById)
+      .map((m) => m.id)
+  );
   for (const msg of recentMessages.slice(0, -1)) {
     if (msg.supersededById) continue; // skip edited messages — their branch is accessible via navigation
+    if (msg.parentId && supersededIds.has(msg.parentId)) continue; // skip orphaned children of superseded messages
     chatMessages.push({
       role: msg.role as "system" | "user" | "assistant",
       content: msg.content,
