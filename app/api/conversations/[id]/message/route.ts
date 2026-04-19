@@ -280,12 +280,14 @@ export async function POST(
   let weatherWidgetData: any = null; // structured data for the visual weather card
 
   // ── Run classifier and fetch data (widgets ALWAYS run, search respects skipSearch) ──
-  if (convProvider && convModel) {
+  // Skip classifier when editing a message — send raw edited content without context resolution
+  if (convProvider && convModel && !replaceMessageId) {
     try {
       // Pass the last few turns so the classifier can resolve follow-up questions in context
       const classifierContext = existingMessages
         .slice(-5, -1) // up to 4 messages before the current one
         .map((m) => ({ role: m.role, content: typeof m.content === "string" ? m.content.slice(0, 300) : "" }));
+
 
       const classification = await classifyQuery(content, convProvider, convModel, classifierContext);
       const { skipSearch, showWeatherWidget, showStockWidget, standaloneFollowUp } = classification;
