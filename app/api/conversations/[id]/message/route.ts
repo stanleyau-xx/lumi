@@ -268,9 +268,7 @@ export async function POST(
     return NextResponse.json({ error: "No provider or model configured" }, { status: 400 });
   }
 
-  // forceSearch = per-conversation toggle: always search regardless of classifier
-  // autoSearch  = SearXNG is globally enabled: run classifier on every message
-  const forceSearch = searchEnabled ?? conversation.searchEnabled;
+  // autoSearch = SearXNG is globally enabled: run classifier on every message
   const searxngConfig = await getSearXNGConfig();
   const autoSearch = !!(searxngConfig?.enabled && searxngConfig?.url);
   let weatherResult = "";
@@ -318,7 +316,7 @@ export async function POST(
       const { skipSearch, showWeatherWidget, showStockWidget, standaloneFollowUp } = classification;
       const resolvedQuery = standaloneFollowUp || content;
 
-      console.log("[Search] classification:", classification, "| force:", forceSearch, "| auto:", autoSearch);
+      console.log("[Search] classification:", classification, "| auto:", autoSearch);
 
       // ── Widgets ALWAYS run when their flags are set (regardless of skipSearch) ──
       if (showWeatherWidget) {
@@ -361,7 +359,6 @@ export async function POST(
       }
 
       // ── Web search runs when classifier says search is needed (skipSearch=false) ──
-      // forceSearch is removed — classifier is the sole decision-maker
       const shouldSearchWeb = !skipSearch;
       if (shouldSearchWeb && !searchResults) {
         // Skip if we already got stock or weather widget data
