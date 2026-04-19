@@ -360,8 +360,9 @@ export async function POST(
         }
       }
 
-      // ── Web search runs when skipSearch=false (classifier says search needed), OR when forceSearch=true ──
-      const shouldSearchWeb = (!skipSearch) || forceSearch;
+      // ── Web search runs when classifier says search is needed (skipSearch=false) ──
+      // forceSearch is removed — classifier is the sole decision-maker
+      const shouldSearchWeb = !skipSearch;
       if (shouldSearchWeb && !searchResults) {
         // Skip if we already got stock or weather widget data
         if (!showStockWidget && !showWeatherWidget) {
