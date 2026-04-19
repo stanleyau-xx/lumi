@@ -450,6 +450,13 @@ export async function POST(
         fullContent += marker;
       }
 
+      // Emit status marker so frontend can show "Thinking" vs "Researching"
+      // This must come before <think> blocks / AI content starts streaming
+      const didSearch = !!(searchResults || weatherWidgetData || stockTicker);
+      const statusMarker = didSearch ? `[STATUS:searching]\n` : `[STATUS:thinking]\n`;
+      controller.enqueue(encoder.encode(statusMarker));
+      fullContent += statusMarker;
+
       try {
         const aiStream = await streamChat({ provider: convProvider, model: convModel, messages: chatMessages, stream: true });
         fullContent += await pipeAIStream(aiStream, controller, encoder);

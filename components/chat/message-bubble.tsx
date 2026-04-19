@@ -29,6 +29,16 @@ async function copyToClipboardSafe(text: string): Promise<void> {
   }
 }
 
+/** Extract [STATUS:thinking|searching] marker */
+function parseStatusMarker(content: string): { isSearching: boolean; text: string } {
+  const match = content.match(/\[STATUS:(thinking|searching)\]\n?/);
+  if (match) {
+    return { isSearching: match[1] === "searching", text: content.replace(match[0], "") };
+  }
+  // Legacy: no marker present, default to thinking
+  return { isSearching: false, text: content };
+}
+
 /** Extract [STOCK:TICKER] marker from the start of a message */
 function parseStockMarker(content: string): { stockTicker: string | null; text: string } {
   const trimmed = content.trimStart();
@@ -67,12 +77,16 @@ function parseThinking(content: string): { thinking: string | null; response: st
   return { thinking: null, response: content, isThinking: false };
 }
 
-function ThinkingBlock({ thinking, isThinking }: { thinking: string | null; isThinking: boolean }) {
+function ThinkingBlock({ thinking, isThinking, isSearching }: { thinking: string | null; isThinking: boolean; isSearching: boolean }) {
   const [open, setOpen] = useState(isThinking);
 
   useEffect(() => {
     if (!isThinking) setOpen(false);
   }, [isThinking]);
+
+  const label = isThinking
+    ? isSearching ? "Researching…" : "Thinking…"
+    : "Thought process";
 
   return (
     <div className="mb-3 rounded-xl border border-border/60 bg-muted/30 text-sm">
@@ -82,7 +96,7 @@ function ThinkingBlock({ thinking, isThinking }: { thinking: string | null; isTh
       >
         <Brain className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-left font-medium text-xs">
-          {isThinking ? "Researching…" : "Thought process"}
+          {label}
         </span>
         {isThinking ? (
           <span className="flex gap-0.5">
@@ -288,7 +302,8 @@ export function MessageBubble({
     // ── Assistant message ──────────────────────────────────────────────────
     const { stockTicker, text: contentWithoutWidget } = parseStockMarker(message.content);
     const { weatherData, text: contentWithoutWeather } = parseWeatherBlock(contentWithoutWidget);
-    const { thinking, response, isThinking } = parseThinking(contentWithoutWeather);
+    const { isSearching, text: contentWithoutStatus } = parseStatusMarker(contentWithoutWeather);
+    const { thinking, response, isThinking } = parseThinking(contentWithoutStatus);
     const showThinking = isThinking || (isStreaming && !response);
     
     return (
@@ -305,7 +320,7 @@ export function MessageBubble({
           <div className="markdown-content">
             {stockTicker && <StockWidget symbol={stockTicker} />}
             {weatherData && <WeatherWidget data={weatherData} />}
-            {showThinking && <ThinkingBlock thinking={thinking} isThinking={showThinking} />}
+            {showThinking && <ThinkingBlock thinking={thinking} isThinking={showThinking} isSearching={isSearching} />}
             {response && (
               <ReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
