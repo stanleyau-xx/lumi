@@ -281,14 +281,29 @@ export async function POST(
 
   // ── Run classifier and fetch data (widgets ALWAYS run, search respects skipSearch) ──
   // Skip classifier when editing a message — send raw edited content without context resolution
-  // Build a filtered message list for use in both classifier context and chat history
-  // Exclude superseded messages and their orphaned children (they belong to a different branch)
-  const allSupersededIds = new Set(
-    existingMessages.filter((m) => m.supersededById).map((m) => m.id)
-  );
-  const filteredMessages = existingMessages.filter(
-    (m) => !m.supersededById && !(m.parentId && allSupersededIds.has(m.parentId))
-  );
+  // Build a complete set of excluded message IDs:
+  // Any superseded message AND all its descendants (transitively) must be excluded.
+  // This ensures an entire old branch is pruned, not just the first level.
+  const excludedIds = new Set<string>();
+
+  // First pass: directly superseded messages
+  for (const m of existingMessages) {
+    if (m.supersededById) excludedIds.add(m.id);
+  }
+
+  // Subsequent passes: transitively add descendants until no more changes
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const m of existingMessages) {
+      if (!excludedIds.has(m.id) && m.parentId && excludedIds.has(m.parentId)) {
+        excludedIds.add(m.id);
+        changed = true;
+      }
+    }
+  }
+
+  const filteredMessages = existingMessages.filter((m) => !excludedIds.has(m.id));
 
   if (convProvider && convModel && !replaceMessageId) {
     try {
