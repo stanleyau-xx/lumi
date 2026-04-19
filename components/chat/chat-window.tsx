@@ -302,11 +302,7 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
     init();
   }, [conversationId]);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  });
+  // Auto-scroll removed — user reads from the beginning as content is generated
 
   const handleSendMessage = async (
     content: string,
