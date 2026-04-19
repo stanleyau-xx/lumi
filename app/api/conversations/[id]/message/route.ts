@@ -372,7 +372,9 @@ export async function POST(
       .filter((m) => m.supersededById)
       .map((m) => m.id)
   );
+  console.log("[EDIT-DEBUG] supersededIds:", [...supersededIds]);
   for (const msg of recentMessages.slice(0, -1)) {
+    console.log("[EDIT-DEBUG]", msg.id.slice(0,8), "| role:", msg.role, "| parentId:", msg.parentId, "| supersededById:", msg.supersededById);
     if (msg.supersededById) continue; // skip edited messages — their branch is accessible via navigation
     if (msg.parentId && supersededIds.has(msg.parentId)) continue; // skip orphaned children of superseded messages
     chatMessages.push({
