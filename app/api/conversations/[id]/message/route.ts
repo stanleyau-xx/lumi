@@ -365,7 +365,9 @@ export async function POST(
   }
 
   // All history except the last message (which is the current user turn)
+  // Filter out messages that have been superseded by an edit (they form a different branch)
   for (const msg of recentMessages.slice(0, -1)) {
+    if (msg.supersededById) continue; // skip edited messages — their branch is accessible via navigation
     chatMessages.push({
       role: msg.role as "system" | "user" | "assistant",
       content: msg.content,
