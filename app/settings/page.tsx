@@ -294,7 +294,7 @@ export default function SettingsPage() {
       </div>
 
       <footer className="mt-8 text-center text-xs text-muted-foreground">
-        v{version}
+        {version}
       </footer>
     </div>
     </div>

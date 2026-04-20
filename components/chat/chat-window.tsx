@@ -358,6 +358,12 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
         ? updated.map((m) => (m.id === "pending-user" ? userMessage : m))
         : [...updated, userMessage];
     });
+    // Scroll to bottom so user sees their own message immediately
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      }
+    });
     setIsStreaming(true);
     // Switch active branch optimistically when editing (explicit or auto-detected).
     if (options?.parentMessageId !== undefined || isAutoEdit) {
