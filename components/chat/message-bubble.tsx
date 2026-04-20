@@ -383,7 +383,9 @@ export function MessageBubble({
               </ReactMarkdown>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground" title={ts.title}>{ts.display}</p>
+          {!isStreaming && !isThinking && (
+            <p className="mt-1 text-xs text-muted-foreground" title={ts.title}>{ts.display}</p>
+          )}
         </div>
       </div>
     );
