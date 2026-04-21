@@ -147,9 +147,9 @@ SearXNG is a privacy-respecting metasearch engine that aggregates results from m
 ```bash
 docker run -d \
   --name searxng \
-  -p 8888:8888 \
+  -p 8080:8080 \
   -v $(pwd)/searxng:/etc/searxng \
-  -e SEARXNG_BASE_URL="http://localhost:8888" \
+  -e SEARXNG_BASE_URL="http://localhost:8080" \
   searxng/searxng:latest
 ```
 
@@ -179,13 +179,13 @@ docker restart searxng
 ### Verify SearXNG is Running
 
 ```bash
-curl "http://localhost:8888/search?q=test&format=json"
+curl "http://localhost:8080/search?q=test&format=json"
 ```
 
 ### Connect to Lumi
 
 1. In Lumi: **Admin → Search**
-2. Enter your SearXNG URL, e.g. `http://YOUR_SEARXNG_IP:8888`
+2. Enter your SearXNG URL, e.g. `http://YOUR_SEARXNG_IP:8080`
 3. Enable web search
 
 Searches run automatically when a query needs real-time data — no need to ask explicitly.
