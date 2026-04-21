@@ -1,5 +1,5 @@
 # ── Stage 1: build ────────────────────────────────────────────────────────────
-FROM node:20-bookworm AS builder
+FROM node:24-bookworm AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN mkdir -p public
 RUN npm run build
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
-FROM node:20-bookworm AS runner
+FROM node:24-bookworm AS runner
 
 WORKDIR /app
 
