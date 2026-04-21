@@ -1,12 +1,14 @@
 # Lumi 🤖
 
+![Lumi AI Chat](https://github.com/user-attachments/assets/2d9e1683-5849-4689-aae3-9d7c497e732f)
+
 A self-hosted AI chat platform built with Next.js. Connect your own API keys — OpenAI, Anthropic, Google, OpenRouter, Ollama, and more — so your data stays on your server, not theirs.
 
 ---
 
 ## Features
 
-- **Multi-provider** 🤝 — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, MiniMax, and any OpenAI-compatible endpoint
+- **Multi-provider** 🤝 — OpenAI, Anthropic (Claude), OpenRouter, Ollama, MiniMax, and any OpenAI-compatible endpoint
 - **Streaming responses** ⚡ — real-time AI output with stop and resume
 - **Message branching** 🌿 — edit any past message and explore alternative replies
 - **File attachments** 📎 — PDF, spreadsheets, images (with OCR)
@@ -89,7 +91,7 @@ docker cp lumi:/app/data/db.sqlite ./backup-$(date +%Y%m%d).sqlite
 
 ## Local Development
 
-Requires **Node.js 20+** and **npm**.
+Requires **Node.js 24+** and **npm**.
 
 ```bash
 npm install
@@ -118,8 +120,57 @@ npm run db:studio   # open Drizzle DB browser
 
 ## Web Search (SearXNG)
 
-1. Set up [SearXNG](https://searxng.github.io/searxng/) and enable JSON output in its settings
-2. In Lumi: **Admin → Search**, enter your SearXNG URL and enable it
+### Install SearXNG
+
+```bash
+# Clone SearXNG
+git clone https://github.com/searxng/searxng.git
+cd searxng
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy and edit settings
+cp searxng/settings.yml searxng/settings.local.yml
+```
+
+### Configure SearXNG (settings.local.yml)
+
+Enable JSON output and set binding:
+
+```yaml
+search:
+  formats:
+    - json
+
+server:
+  bind_address: "0.0.0.0"   # or your specific LAN IP
+  port: 8888
+  secret_key: "change-this-to-a-random-string"
+  limiter: false
+```
+
+### Run SearXNG
+
+```bash
+# Development (from searxng directory)
+python searxng/webapp.py
+
+# Production (with uwsgi)
+uwsgi -f searxng/uwsgi.ini
+```
+
+### Verify SearXNG is Running
+
+```bash
+curl "http://localhost:8888/search?q=test&format=json"
+```
+
+### Connect to Lumi
+
+1. In Lumi: **Admin → Search**
+2. Enter your SearXNG URL, e.g. `http://YOUR_SEARXNG_IP:8888`
+3. Enable web search
 
 Searches run automatically when a query needs real-time data — no need to ask explicitly.
 
