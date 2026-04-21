@@ -49,10 +49,22 @@ Open `http://localhost:3000` and log in with your admin credentials. Then go to 
 
 ## Docker Commands
 
+### Build Lumi Docker Image
+
 ```bash
-# Build image manually
+# Build for your current platform
 docker build -t lumi .
 
+# Build for Raspberry Pi / ARM64 (e.g. OrangePi, RockPi)
+docker buildx build --platform linux/arm64 -t lumi:latest --output type=docker,dest=lumi-arm64.tar .
+
+# Load the .tar file into Docker
+docker load -i lumi-arm64.tar
+```
+
+### Run with Docker Compose
+
+```bash
 # Start
 docker compose up -d
 
