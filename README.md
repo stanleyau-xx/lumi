@@ -135,7 +135,9 @@ npm run db:studio   # open Drizzle DB browser
 
 ---
 
-## Web Search (SearXNG)
+## Web Search (SearXNG) — Required Dependency
+
+> ⚠️ **SearXNG is required** for web search to work. Lumi will still run without it, but web search features will be unavailable.
 
 ### Run SearXNG with Docker
 
