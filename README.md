@@ -139,6 +139,9 @@ npm run db:studio   # open Drizzle DB browser
 
 > ⚠️ **SearXNG is required** for web search to work. Lumi will still run without it, but web search features will be unavailable.
 
+**What is SearXNG?**
+SearXNG is a privacy-respecting metasearch engine that aggregates results from multiple search providers (Google, Bing, DuckDuckGo, etc.) without tracking or storing your queries. Lumi uses it to fetch real-time web results when you ask about current events, prices, news, or anything that needs up-to-date information.
+
 ### Run SearXNG with Docker
 
 ```bash
