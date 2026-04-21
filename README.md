@@ -120,23 +120,20 @@ npm run db:studio   # open Drizzle DB browser
 
 ## Web Search (SearXNG)
 
-### Install SearXNG
+### Run SearXNG with Docker
 
 ```bash
-# Clone SearXNG
-git clone https://github.com/searxng/searxng.git
-cd searxng
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy and edit settings
-cp searxng/settings.yml searxng/settings.local.yml
+docker run -d \
+  --name searxng \
+  -p 8888:8888 \
+  -v $(pwd)/searxng:/etc/searxng \
+  -e SEARXNG_BASE_URL="http://localhost:8888" \
+  searxng/searxng:latest
 ```
 
-### Configure SearXNG (settings.local.yml)
+### Configure SearXNG
 
-Enable JSON output and set binding:
+Edit `searxng/settings.yml`:
 
 ```yaml
 search:
@@ -144,20 +141,17 @@ search:
     - json
 
 server:
-  bind_address: "0.0.0.0"   # or your specific LAN IP
-  port: 8888
-  secret_key: "change-this-to-a-random-string"
+  bind_address: "0.0.0.0"
   limiter: false
+
+ui:
+  static_use_hash: true
 ```
 
-### Run SearXNG
+Then restart the container:
 
 ```bash
-# Development (from searxng directory)
-python searxng/webapp.py
-
-# Production (with uwsgi)
-uwsgi -f searxng/uwsgi.ini
+docker restart searxng
 ```
 
 ### Verify SearXNG is Running
