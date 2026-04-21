@@ -49,17 +49,15 @@ Open `http://localhost:3000` and log in with your admin credentials. Then go to 
 
 ## Docker Commands
 
-### Build Lumi Docker Image
+### Build and Run Lumi Docker Image
 
 ```bash
-# Build for AMD64 (Intel/AMD desktops, most VPS)
+# For AMD64 (Intel/AMD desktops, most VPS)
 docker buildx build --platform linux/amd64 -t lumi:latest --output type=docker,dest=lumi-amd64.tar .
-
-# Build for ARM64 (Raspberry Pi, OrangePi, RockPi, Mac with Apple Silicon)
-docker buildx build --platform linux/arm64 -t lumi:latest --output type=docker,dest=lumi-arm64.tar .
-
-# Load the .tar file into Docker (replace with your architecture)
 docker load -i lumi-amd64.tar
+
+# For ARM64 (Raspberry Pi, OrangePi, RockPi, Mac with Apple Silicon)
+docker buildx build --platform linux/arm64 -t lumi:latest --output type=docker,dest=lumi-arm64.tar .
 docker load -i lumi-arm64.tar
 ```
 
