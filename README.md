@@ -70,8 +70,13 @@ docker compose up -d
 
 # Rebuild after changes
 docker compose down && docker compose up -d --build
+```
 
-# Backup database
+---
+
+## Backup
+
+```bash
 docker cp lumi:/app/data/db.sqlite ./backup-$(date +%Y%m%d).sqlite
 ```
 
